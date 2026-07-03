@@ -113,6 +113,11 @@ header.top p{margin:0;color:var(--on-dark-muted);font-size:13px;max-width:560px;
 }
 .field input:focus,.field select:focus{border-color:var(--wave-green-dark);box-shadow:0 0 0 3px rgba(0,232,143,.15);}
 .field input[readonly]{background:var(--surface-soft);color:var(--steel);}
+.field input:disabled,.field select:disabled{
+  background-color:var(--surface-soft);color:var(--stone);border-color:var(--hairline);
+  cursor:not-allowed;opacity:1;-webkit-text-fill-color:var(--stone);
+}
+.field label.dim{color:var(--stone);}
 .field.error input,.field.error select{border-color:var(--danger);}
 .field .err-msg{font-size:11.5px;color:var(--danger);display:none;}
 .field.error .err-msg{display:block;}
@@ -695,6 +700,7 @@ let season = 0;
 let seasonIsAuto = true;
 let teamCountManual = false;
 let dokdoPaxManual = false; // 독도 탐방 인원을 직접 수정했는지 (false면 전체 인원 자동)
+let shipInSync = true;      // 오는편이 가는편을 따라가는 상태인지
 
 /* ============================================================
    유틸
@@ -858,8 +864,9 @@ function setLodgings(arr){
    ============================================================ */
 function getShips(){
   const out = $('shipOut').value;
-  const inSel = $('shipIn').value;
-  return { out, in: inSel==='same' ? out : inSel, mixed: inSel!=='same' && inSel!==out };
+  let v = $('shipIn').value;
+  if(shipInSync || v==='same') v = out;
+  return { out, in: v, mixed: v!==out };
 }
 /* 한 선사 기준 1인 요금 (원장 그대로, 콤비=버스·택시 평균, 렌트+스노클링=rents 열) */
 function shipUnitRaw(ship, nights, group, tour, snorkel, col){
@@ -956,6 +963,8 @@ function dDayText(dateStr){
   return '';
 }
 function render(){
+  /* 오는편 동기화: '가는편과 동일' 상태면 실제 선박명이 그대로 표시되도록 */
+  if(shipInSync) $('shipIn').value = $('shipOut').value;
   const q = computeQuote();
 
   /* 노선 표시 */
@@ -969,7 +978,7 @@ function render(){
       `<div class="city" id="ticketShip">${shortShip(q.ships.out)}</div><div class="arrow">⇄</div><div class="city">울릉도</div>`;
   }
   $('mixHint').style.display = q.ships.mixed ? 'block' : 'none';
-  $('shipInBadge').style.display = $('shipIn').value==='same' ? 'inline-block' : 'none';
+  $('shipInBadge').style.display = shipInSync ? 'inline-block' : 'none';
   $('snorkelWrap').style.display = $('tourSel').value==='rent' ? 'flex' : 'none';
   $('tourHint').style.display = $('tourSel').value==='combi' ? 'block' : 'none';
 
@@ -986,6 +995,10 @@ function render(){
     $('dokdoPax').value = '';
     $('dokdoPaxBadge').style.display = 'none';
   }
+  ['dokdoPax','dokdoAmpm','dokdoTime'].forEach(id=>{
+    const lab = document.querySelector(`label[for="${id}"]`);
+    if(lab) lab.classList.toggle('dim', !dokdoOn);
+  });
 
   $('ticketDays').textContent = q.nights===1 ? '1박 2일' : '2박 3일';
   const start = $('startDate').value;
@@ -1217,6 +1230,7 @@ function collectForm(){
     staffName: $('staffName').value,
     shipOut: $('shipOut').value,
     shipIn: $('shipIn').value,
+    shipInSync,
     daySel: $('daySel').value,
     startDate: $('startDate').value,
     tourSel: $('tourSel').value,
@@ -1245,6 +1259,9 @@ function applyForm(f){
   $('staffName').value = f.staffName||'서민구 팀장';
   $('shipOut').value = f.shipOut||'crz';
   $('shipIn').value = f.shipIn||'same';
+  shipInSync = (typeof f.shipInSync==='boolean')
+    ? f.shipInSync
+    : (!f.shipIn || f.shipIn==='same' || f.shipIn===(f.shipOut||'crz'));
   $('daySel').value = f.daySel||'1';
   $('startDate').value = f.startDate||'';
   $('tourSel').value = f.tourSel||'bus';
@@ -1367,9 +1384,16 @@ $('staffName').addEventListener('change', ()=>{
   render();
 });
 
-['shipOut','shipIn','tourSel','dokdoChk','snorkelChk','custName'].forEach(id=>{
+['shipOut','tourSel','dokdoChk','snorkelChk','custName'].forEach(id=>{
   $(id).addEventListener('input', render);
   $(id).addEventListener('change', render);
+});
+
+/* 오는편: '가는편과 동일'을 고르거나 가는편과 같은 선박을 고르면 동기화 모드 */
+$('shipIn').addEventListener('change', ()=>{
+  const v = $('shipIn').value;
+  shipInSync = (v==='same' || v===$('shipOut').value);
+  render();
 });
 
 $('custName').addEventListener('input', ()=>{
@@ -1486,6 +1510,7 @@ $('resetBtn').addEventListener('click', ()=>{
   $('staffTel').value = '010-3361-4142';
   $('shipOut').value='crz';
   $('shipIn').value='same';
+  shipInSync=true;
   $('daySel').value='1';
   $('startDate').value='';
   $('endDate').value='';
