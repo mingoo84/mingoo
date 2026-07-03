@@ -492,6 +492,7 @@ footer.note{text-align:center;color:var(--steel);font-size:12px;margin-top:26px;
           <div class="field">
             <label for="endDate">도착일 (자동 계산)</label>
             <input id="endDate" type="text" readonly placeholder="-">
+            <span class="hint" id="cruiseHint" style="display:none;color:var(--wave-green-dark);margin-top:2px;">크루즈는 전날 밤 출항(선상 1박)이라 일정에 +1일이 자동 반영됩니다.</span>
           </div>
           <div class="field">
             <label>요금 시즌 <span class="badge-auto" id="seasonBadge" style="display:none;">자동 추천</span></label>
@@ -726,6 +727,9 @@ function addDays(dateStr, days){
   const y=d.getFullYear(), m=String(d.getMonth()+1).padStart(2,'0'), dd=String(d.getDate()).padStart(2,'0');
   return `${y}-${m}-${dd}`;
 }
+/* 크루즈(포항크루즈)는 전날 밤 출항 → 선상 1박이 추가됨. 가는편이 crz면 +1박 */
+function cruiseExtraNight(){ return $('shipOut').value === 'crz' ? 1 : 0; }
+function packLabel(n, spaced){ return spaced ? `${n}박 ${n+1}일` : `${n}박${n+1}일`; }
 function numToKorean(num){
   if(num===0) return '영원';
   const digits=['','일','이','삼','사','오','육','칠','팔','구'];
@@ -938,7 +942,11 @@ function computeQuote(){
   const lodgeExtra = lodgings.reduce((s,l)=>s+l.price, 0);
   total += lodgeExtra;
 
-  return {ships, nights, tour, dokdo, snorkel, season, counts, totalPax, total, lines, lodgings, lodgeExtra,
+  /* 크루즈 전날 밤 출항 → 표기 박수 +1 (요금은 원장 nights 기준 그대로) */
+  const cruiseNight = ships.out === 'crz';
+  const dispNights = nights + (cruiseNight ? 1 : 0);
+
+  return {ships, nights, dispNights, cruiseNight, tour, dokdo, snorkel, season, counts, totalPax, total, lines, lodgings, lodgeExtra,
           dokdoShip, dokdoPax, dokdoPartial, dokdoUnit};
 }
 
@@ -985,6 +993,7 @@ function render(){
       `<div class="city" id="ticketShip">${shortShip(q.ships.out)}</div><div class="arrow">⇄</div><div class="city">울릉도</div>`;
   }
   $('mixHint').style.display = q.ships.mixed ? 'block' : 'none';
+  $('cruiseHint').style.display = q.cruiseNight ? 'block' : 'none';
   $('shipInBadge').style.display = shipInSync ? 'inline-block' : 'none';
   $('snorkelWrap').style.display = $('tourSel').value==='rent' ? 'flex' : 'none';
   $('tourHint').style.display = $('tourSel').value==='combi' ? 'block' : 'none';
@@ -1007,7 +1016,8 @@ function render(){
     if(lab) lab.classList.toggle('dim', !dokdoOn);
   });
 
-  $('ticketDays').textContent = q.nights===1 ? '1박 2일' : '2박 3일';
+  $('ticketDays').textContent = packLabel(q.dispNights, true) + (q.cruiseNight ? ' · 크루즈 전야출항' : '');
+  syncEndDate();
   const start = $('startDate').value;
   const dday = dDayText(start);
   $('ticketDate').innerHTML = start ? `${fmtDate(start)}${dday?`<span class="dday">${dday}</span>`:''}` : '-';
@@ -1054,12 +1064,21 @@ function render(){
 /* ============================================================
    일정표
    ============================================================ */
-function buildItineraryRows(nights, tour, dokdo, snorkel, dk){
+function buildItineraryRows(nights, tour, dokdo, snorkel, dk, cruiseNight){
   const tourWord = {bus:'버스투어', taxi:'택시투어', combi:'콤비투어', rent:'렌터카'}[tour] || '투어';
   const rows = [];
-  rows.push(['1일차','오전','승선권 수령 및 승선','']);
-  rows.push(['1일차','','출항 → 울릉도','']);
-  rows.push(['1일차','','중식','']);
+  if(cruiseNight){
+    /* 크루즈: 전날 밤 포항 출항 → 선상 1박 → 익일 새벽 울릉도 도착 */
+    rows.push(['전일','밤','포항여객터미널 집결 · 승선권 수령','']);
+    rows.push(['전일','','포항크루즈 출항 (야간 운항 · 선상 1박)','크루즈']);
+    rows.push(['1일차','새벽','울릉도 도착 및 하선','']);
+    rows.push(['1일차','오전','조식 후 일정 시작','']);
+    rows.push(['1일차','','중식','']);
+  } else {
+    rows.push(['1일차','오전','승선권 수령 및 승선','']);
+    rows.push(['1일차','','출항 → 울릉도','']);
+    rows.push(['1일차','','중식','']);
+  }
   rows.push(['1일차','오후','◆ 울릉도 한바퀴 '+tourWord+' A','']);
   rows.push(['1일차','','도동/저동 → 통구미 → 태하 → 현포 → 성불사 → 나리분지 → 삼선암 → 관음도 앞 → 도동/저동','']);
   rows.push(['1일차','','숙소 체크인 및 자유일정','']);
@@ -1168,7 +1187,7 @@ function generateQuote(fromSticky){
   const staffName = $('staffName').value;
   const staffTel = STAFF_TEL[staffName] || $('staffTel').value;
   const startDate = $('startDate').value;
-  const endDate = addDays(startDate, q.nights);
+  const endDate = addDays(startDate, q.dispNights);
   const deposit = q.totalPax*DEPOSIT_PER_PERSON;
   const teamPax = teamCountManual ? (parseInt($('teamCount').value,10) || q.totalPax) : q.totalPax;
   const seasonWord = SEASON_LABEL[q.season];
@@ -1180,7 +1199,7 @@ function generateQuote(fromSticky){
   const dokdoTime = $('dokdoTime').value;
   const dokdoAmpm = $('dokdoAmpm').value;
   const dk = {ship: q.dokdoShip, ampm: dokdoAmpm, time: dokdoTime};
-  const rows = buildItineraryRows(q.nights, q.tour, q.dokdo, q.snorkel, dk);
+  const rows = buildItineraryRows(q.nights, q.tour, q.dokdo, q.snorkel, dk, q.cruiseNight);
   const tourFull = TOUR_LABEL[q.tour] + (q.snorkel?'+스노클링':'');
   const bits = [];
   if(q.dokdoShip) bits.push(q.dokdoShip);
@@ -1195,7 +1214,7 @@ function generateQuote(fromSticky){
 발신 굿투어
 
 1. 건   명 : ${custName}님 ${teamPax}인팀 ${shipText(q.ships)} ${tourFull}${q.dokdo?'+독도':''}
-2. 기   간 : ${fmtDate(startDate)} ~ ${fmtDate(endDate)} (${q.nights===1?'1박2일':'2박3일'} · ${seasonWord})
+2. 기   간 : ${fmtDate(startDate)} ~ ${fmtDate(endDate)} (${packLabel(q.dispNights)} · ${seasonWord}${q.cruiseNight?' · 크루즈 전야출항':''})
 3. 제   공 : 굿투어주식회사(사업자: 506-81-87523) / 계좌: 농협 351-0693-3158-03
 4. 포   함 : 왕복승선권 + ${lodgeText(q.lodgings)} + ${tourFull}${dokdoWord}
 5. 청구금 : 총금액 ${fmt(q.total)} ${numToKorean(q.total)}정
@@ -1217,7 +1236,7 @@ ${rowsToTabText(rows)}
     + (q.lodgeExtra>0 ? `\n   - 숙소 추가요금 = <b>${fmt(q.lodgeExtra)}</b>` : '');
   $('d_summary').innerHTML =
     `<b>1. 건   명</b> : ${esc(custName)}님 ${teamPax}인팀 ${shipText(q.ships)} ${tourFull}${q.dokdo?'+독도':''}\n`+
-    `<b>2. 기   간</b> : ${fmtDate(startDate)} ~ ${fmtDate(endDate)}  (${q.nights===1?'1박2일':'2박3일'} · ${seasonWord})\n`+
+    `<b>2. 기   간</b> : ${fmtDate(startDate)} ~ ${fmtDate(endDate)}  (${packLabel(q.dispNights)} · ${seasonWord}${q.cruiseNight?' · 크루즈 전야출항':''})\n`+
     `<b>3. 제   공</b> : 굿투어주식회사(사업자: 506-81-87523) / 계좌: 농협 351-0693-3158-03\n`+
     `<b>4. 포   함</b> : 왕복승선권 + ${esc(lodgeText(q.lodgings))} + ${tourFull}${dokdoWord}\n`+
     `<b>5. 청구금</b> : 총 <b>${fmt(q.total)}</b> (${numToKorean(q.total)}정)\n`+
@@ -1228,7 +1247,7 @@ ${rowsToTabText(rows)}
   pushHistory({
     ts: Date.now(),
     custName, total: q.total, totalPax: teamPax,
-    ship: q.ships.out, nights: q.nights, startDate,
+    ship: q.ships.out, nights: q.dispNights, startDate,
     snapshot: collectForm(),
   });
 
@@ -1343,7 +1362,7 @@ function renderHistory(){
     item.className = 'hist-item';
     item.innerHTML =
       `<div style="flex:1;min-width:0;">
-         <div class="h-main">${esc(e.custName)}님 · ${e.totalPax}명 · ${shortShip(e.ship)||''} ${e.nights===1?'1박2일':'2박3일'}</div>
+         <div class="h-main">${esc(e.custName)}님 · ${e.totalPax}명 · ${shortShip(e.ship)||''} ${packLabel(e.nights)}</div>
          <div class="h-sub">${e.startDate ? fmtDate(e.startDate)+' 출발 · ' : ''}${when} 생성</div>
        </div>
        <div class="h-amt">${fmt(e.total)}</div>
@@ -1371,7 +1390,7 @@ function renderHistory(){
    ============================================================ */
 function syncEndDate(){
   const start = $('startDate').value;
-  const nights = parseInt($('daySel').value,10);
+  const nights = parseInt($('daySel').value,10) + cruiseExtraNight();
   $('endDate').value = start ? fmtDate(addDays(start, nights)) : '';
 }
 
