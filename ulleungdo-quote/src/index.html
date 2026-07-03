@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>굿투어 울릉도 견적 계산기 v3</title>
+<title>굿투어 울릉도 견적 계산기 v4</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
 <style>
@@ -11,10 +11,10 @@
    울릉도 바다 테마 — 디자인 토큰
    ============================================================ */
 :root{
-  --sea-deep:#04263b;        /* 울릉 심해 네이비 */
+  --sea-deep:#04263b;
   --sea-mid:#0a3d55;
   --sea-line:#123f58;
-  --wave-green:#00e88f;      /* 파도 형광 그린 (브랜드 액센트) */
+  --wave-green:#00e88f;
   --wave-green-dark:#00785c;
   --wave-green-soft:#d2f7e6;
   --wave-green-bg:#e8fbf2;
@@ -44,14 +44,11 @@ body{
   color:var(--ink);
   font-family:'Pretendard Variable',Pretendard,-apple-system,BlinkMacSystemFont,'Malgun Gothic',sans-serif;
   -webkit-font-smoothing:antialiased;
-  padding-bottom:calc(84px + env(safe-area-inset-bottom)); /* sticky bar 공간 */
+  padding-bottom:calc(84px + env(safe-area-inset-bottom));
 }
 .wrap{max-width:1180px;margin:0 auto;padding:16px 14px 40px;}
 @media(min-width:961px){ .wrap{padding:28px 20px 60px;} body{padding-bottom:0;} }
 
-/* ============================================================
-   헤더
-   ============================================================ */
 header.top{
   background:linear-gradient(135deg,var(--sea-deep) 0%,#06344c 60%,#0a4a63 100%);
   border-radius:var(--radius);
@@ -72,9 +69,6 @@ header.top p{margin:0;color:var(--on-dark-muted);font-size:13px;max-width:560px;
   header.top p{font-size:14px;}
 }
 
-/* ============================================================
-   레이아웃
-   ============================================================ */
 .grid{display:grid;grid-template-columns:1fr;gap:14px;align-items:start;}
 @media(min-width:961px){
   .grid{grid-template-columns:1.15fr 1fr;gap:20px;}
@@ -98,8 +92,13 @@ header.top p{margin:0;color:var(--on-dark-muted);font-size:13px;max-width:560px;
   width:22px;height:22px;border-radius:50%;background:var(--wave-green-dark);color:var(--on-dark);
   font-size:11px;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-weight:700;
 }
+.card h3.sub{
+  font-size:12.5px;color:var(--slate);margin:18px 0 10px;font-weight:700;
+  display:flex;align-items:center;gap:7px;
+}
 
 .field-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;}
+@media(max-width:420px){ .field-row{grid-template-columns:1fr;} }
 .field{display:flex;flex-direction:column;gap:6px;}
 .field label{font-size:12.5px;color:var(--steel);font-weight:600;}
 .field input,.field select{
@@ -108,7 +107,7 @@ header.top p{margin:0;color:var(--on-dark-muted);font-size:13px;max-width:560px;
   outline:none;transition:border-color .15s,box-shadow .15s;width:100%;
   -webkit-appearance:none;appearance:none;
 }
-.field select{
+.field select,select.mini{
   background-image:url("data:image/svg+xml,%3Csvg width='12' height='8' viewBox='0 0 12 8' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1.5L6 6.5L11 1.5' stroke='%235f7385' stroke-width='1.8' stroke-linecap='round'/%3E%3C/svg%3E");
   background-repeat:no-repeat;background-position:right 13px center;padding-right:34px;
 }
@@ -120,9 +119,9 @@ header.top p{margin:0;color:var(--on-dark-muted);font-size:13px;max-width:560px;
 
 .pill-group{display:flex;gap:8px;flex-wrap:wrap;}
 .pill{
-  border:1.5px solid var(--hairline);border-radius:9999px;padding:9px 18px;font-size:13.5px;
+  border:1.5px solid var(--hairline);border-radius:9999px;padding:11px 18px;font-size:13.5px;
   cursor:pointer;background:var(--canvas);color:var(--steel);font-weight:600;transition:.15s;
-  user-select:none;font-family:inherit;
+  user-select:none;font-family:inherit;min-height:44px;display:inline-flex;align-items:center;
 }
 .pill.active{background:var(--sea-deep);border-color:var(--sea-deep);color:var(--on-dark);}
 .pill:focus-visible{outline:2px solid var(--wave-green-dark);outline-offset:2px;}
@@ -132,17 +131,24 @@ header.top p{margin:0;color:var(--on-dark-muted);font-size:13px;max-width:560px;
   background:var(--wave-green-soft);color:var(--wave-green-dark);margin-left:6px;vertical-align:1px;
 }
 
+/* 인원 구성 행 */
 .tier-row{
-  display:grid;grid-template-columns:1fr 108px;gap:12px;align-items:center;
+  display:grid;grid-template-columns:1fr 134px;gap:12px;align-items:center;
   padding:11px 0;border-bottom:1px dashed var(--hairline);
 }
 .tier-row:last-child{border-bottom:none;}
 .tier-name{font-size:14px;font-weight:700;}
-.tier-sub{font-size:11px;color:var(--wave-green-dark);font-weight:700;background:var(--wave-green-soft);
-  display:inline-block;padding:2px 9px;border-radius:9999px;margin-top:4px;}
+.tier-meta{display:flex;align-items:center;gap:8px;margin-top:5px;flex-wrap:wrap;}
+select.tier-group{
+  border:1px solid var(--hairline);border-radius:9999px;padding:3px 26px 3px 10px;height:26px;
+  font-size:11px;font-weight:700;color:var(--wave-green-dark);background-color:var(--wave-green-soft);
+  font-family:inherit;outline:none;-webkit-appearance:none;appearance:none;
+  background-position:right 8px center;background-size:9px;
+}
+.tier-unit{font-size:11.5px;color:var(--steel);font-weight:600;font-variant-numeric:tabular-nums;}
 .stepper{display:flex;align-items:stretch;border:1.5px solid var(--hairline-strong);border-radius:10px;overflow:hidden;height:44px;}
 .stepper button{
-  width:34px;border:none;background:var(--surface-soft);color:var(--slate);font-size:18px;font-weight:700;
+  width:44px;border:none;background:var(--surface-soft);color:var(--slate);font-size:18px;font-weight:700;
   cursor:pointer;font-family:inherit;padding:0;
 }
 .stepper button:active{background:var(--wave-green-soft);}
@@ -156,9 +162,23 @@ header.top p{margin:0;color:var(--on-dark-muted);font-size:13px;max-width:560px;
 .checkline input{width:19px;height:19px;accent-color:var(--wave-green-dark);}
 .checkline label{font-size:14px;font-weight:700;}
 
-/* ============================================================
-   티켓 (견적 요약)
-   ============================================================ */
+/* 숙소 리스트 */
+.lodge-row{
+  display:grid;grid-template-columns:88px 1fr 104px 28px;gap:8px;align-items:center;margin-bottom:8px;
+}
+.lodge-row select,.lodge-row input{
+  border:1.5px solid var(--hairline-strong);border-radius:10px;padding:8px 10px;height:42px;
+  font-family:inherit;font-size:13.5px;color:var(--ink);background:var(--canvas);outline:none;width:100%;
+  -webkit-appearance:none;appearance:none;
+}
+.lodge-row select{background-image:url("data:image/svg+xml,%3Csvg width='12' height='8' viewBox='0 0 12 8' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1.5L6 6.5L11 1.5' stroke='%235f7385' stroke-width='1.8' stroke-linecap='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 9px center;background-size:10px;padding-right:26px;}
+.lodge-row input:focus,.lodge-row select:focus{border-color:var(--wave-green-dark);}
+.lodge-row .del{
+  border:none;background:none;color:var(--stone);font-size:18px;cursor:pointer;padding:2px;font-family:inherit;
+}
+.lodge-price-hint{font-size:11px;color:var(--stone);margin-top:-2px;margin-bottom:8px;}
+
+/* 티켓 */
 .ticket{
   background:linear-gradient(160deg,var(--sea-deep) 0%,#06344c 100%);
   color:var(--on-dark);
@@ -168,16 +188,16 @@ header.top p{margin:0;color:var(--on-dark-muted);font-size:13px;max-width:560px;
   overflow:visible;
   box-shadow:0 8px 28px rgba(4,38,59,.25);
 }
-.ticket .stub-hole{
-  position:absolute;top:118px;width:22px;height:22px;background:var(--surface-soft);border-radius:50%;
-}
-.ticket .stub-hole.left{left:-11px;}
-.ticket .stub-hole.right{right:-11px;}
+.ticket .route-wrap{position:relative;margin-bottom:15px;}
+.ticket .stub-hole{position:absolute;bottom:-11px;width:22px;height:22px;background:var(--surface-soft);border-radius:50%;}
+.ticket .stub-hole.left{left:-31px;}
+.ticket .stub-hole.right{right:-31px;}
 .ticket .route{
-  display:flex;justify-content:space-between;align-items:center;
-  border-bottom:1px dashed rgba(255,255,255,.22);padding-bottom:15px;margin-bottom:15px;
+  display:flex;justify-content:space-between;align-items:center;gap:8px;
+  border-bottom:1px dashed rgba(255,255,255,.22);padding-bottom:15px;flex-wrap:wrap;
 }
 .ticket .route .city{font-size:19px;font-weight:700;letter-spacing:-.3px;}
+.ticket .route .city.small{font-size:14px;}
 .ticket .route .arrow{color:var(--wave-green);font-size:17px;}
 .ticket .meta-grid{display:grid;grid-template-columns:1fr 1fr;gap:11px 18px;margin-bottom:14px;}
 .ticket .meta-grid span.k{display:block;font-size:10.5px;color:var(--on-dark-muted);text-transform:uppercase;letter-spacing:.07em;margin-bottom:3px;}
@@ -195,9 +215,10 @@ header.top p{margin:0;color:var(--on-dark-muted);font-size:13px;max-width:560px;
 .ticket .total-box .amount-kr{font-size:12px;color:var(--on-dark-muted);margin-top:3px;}
 .ticket .total-box .deposit{font-size:12px;color:var(--on-dark-muted);margin-top:8px;padding-top:8px;border-top:1px dashed rgba(255,255,255,.15);}
 .ticket .total-box .deposit b{color:#fff;font-weight:700;}
-.breakdown{margin-top:13px;font-size:13px;}
-.breakdown div{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid rgba(255,255,255,.09);}
-.breakdown div span:last-child{font-variant-numeric:tabular-nums;color:var(--wave-green);font-weight:700;}
+.breakdown{margin-top:13px;font-size:12.5px;}
+.breakdown div{display:flex;justify-content:space-between;gap:10px;padding:6px 0;border-bottom:1px solid rgba(255,255,255,.09);}
+.breakdown div span:first-child{color:#dfeaf2;}
+.breakdown div span:last-child{font-variant-numeric:tabular-nums;color:var(--wave-green);font-weight:700;white-space:nowrap;}
 .breakdown div.empty span{color:var(--on-dark-muted);font-weight:400;}
 
 .btnbar{display:flex;gap:10px;margin-top:16px;flex-wrap:wrap;}
@@ -213,9 +234,7 @@ header.top p{margin:0;color:var(--on-dark-muted);font-size:13px;max-width:560px;
 .btn.light:active{background:var(--wave-green-soft);}
 .btn:disabled{opacity:.55;cursor:not-allowed;}
 
-/* ============================================================
-   선사 링크
-   ============================================================ */
+/* 선사 링크 */
 .ship-links{display:grid;grid-template-columns:1fr;gap:10px;}
 @media(min-width:701px){.ship-links{grid-template-columns:repeat(3,1fr);gap:12px;}}
 .ship-card{
@@ -231,9 +250,7 @@ header.top p{margin:0;color:var(--on-dark-muted);font-size:13px;max-width:560px;
   padding:12px 14px;font-size:12.5px;color:var(--wave-green-dark);line-height:1.6;
 }
 
-/* ============================================================
-   견적 문구 & 이력
-   ============================================================ */
+/* 견적 문구 & 이력 */
 .quote-out{background:var(--canvas);border:1px solid var(--hairline);border-radius:var(--radius);box-shadow:var(--shadow);padding:18px;margin-bottom:14px;}
 @media(min-width:961px){.quote-out{padding:22px 24px;margin-bottom:20px;}}
 .quote-out h2{font-size:16px;margin:0;font-weight:700;}
@@ -255,14 +272,10 @@ header.top p{margin:0;color:var(--on-dark-muted);font-size:13px;max-width:560px;
 .hist-item .h-main{font-size:13.5px;font-weight:700;}
 .hist-item .h-sub{font-size:11.5px;color:var(--steel);margin-top:2px;}
 .hist-item .h-amt{font-size:13.5px;font-weight:800;color:var(--wave-green-dark);white-space:nowrap;font-variant-numeric:tabular-nums;}
-.hist-item .h-del{
-  border:none;background:none;color:var(--stone);font-size:16px;cursor:pointer;padding:4px 6px;flex-shrink:0;
-}
+.hist-item .h-del{border:none;background:none;color:var(--stone);font-size:18px;cursor:pointer;padding:12px 14px;margin:-8px -6px -8px 0;flex-shrink:0;}
 .hist-empty{font-size:12.5px;color:var(--stone);padding:8px 0;}
 
-/* ============================================================
-   견적서 문서 (PNG 출력용)
-   ============================================================ */
+/* 견적서 문서 (PNG) */
 .doc-wrap{overflow-x:auto;padding-top:4px;-webkit-overflow-scrolling:touch;}
 #docSheet{
   width:820px;background:#ffffff;color:var(--ink);margin:0 auto;
@@ -293,9 +306,7 @@ header.top p{margin:0;color:var(--on-dark-muted);font-size:13px;max-width:560px;
 #docSheet .doc-footer{text-align:center;font-size:13.5px;font-weight:700;color:var(--ink);padding:13px;background:var(--surface-soft);line-height:1.6;}
 #docSheet .doc-footer-warn{color:#D64545;margin-top:4px;font-size:12px;}
 
-/* ============================================================
-   모바일 하단 고정 바
-   ============================================================ */
+/* 모바일 하단 고정 바 */
 .stickybar{
   position:fixed;left:0;right:0;bottom:0;z-index:50;
   background:rgba(4,38,59,.97);backdrop-filter:blur(8px);
@@ -311,9 +322,6 @@ header.top p{margin:0;color:var(--on-dark-muted);font-size:13px;max-width:560px;
 }
 @media(min-width:961px){ .stickybar{display:none;} }
 
-/* ============================================================
-   토스트
-   ============================================================ */
 #toast{
   position:fixed;left:50%;transform:translateX(-50%);bottom:calc(96px + env(safe-area-inset-bottom));z-index:100;
   background:var(--ink);color:#fff;font-size:13.5px;font-weight:600;
@@ -331,7 +339,7 @@ footer.note{text-align:center;color:var(--steel);font-size:12px;margin-top:26px;
 <div class="wrap">
 
   <header class="top">
-    <div class="eyebrow">GOOD TOUR · 울릉도 견적 계산기 v3</div>
+    <div class="eyebrow">GOOD TOUR · 울릉도 견적 계산기 v4</div>
     <h1>클릭 몇 번으로 끝나는<br>울릉도 견적서</h1>
     <p>일자·인원·선박·투어·숙박만 고르면 금액과 견적서가 자동 완성됩니다. 문구는 카카오톡·문자로 바로 복사, 이미지는 PNG로 저장하세요. 입력 내용은 자동 저장됩니다.</p>
     <svg class="waves" viewBox="0 0 1200 60" preserveAspectRatio="none" height="46" xmlns="http://www.w3.org/2000/svg"><path d="M0,30 C150,55 300,5 450,30 C600,55 750,5 900,30 C1050,55 1150,15 1200,25 L1200,60 L0,60 Z" fill="rgba(0,232,143,.10)"/><path d="M0,42 C180,20 380,58 560,38 C740,18 920,56 1200,36 L1200,60 L0,60 Z" fill="rgba(0,232,143,.07)"/></svg>
@@ -370,44 +378,9 @@ footer.note{text-align:center;color:var(--steel);font-size:12px;margin-top:26px;
       </div>
 
       <div class="card">
-        <h2><span class="num">2</span>일자 · 선박 · 스케줄</h2>
-        <div class="field-row">
-          <div class="field">
-            <label for="shipSel">선박(출항지)</label>
-            <select id="shipSel">
-              <option value="crz">포항크루즈 · 울릉크루즈</option>
-              <option value="poh">포항쾌속 · 대저해운</option>
-              <option value="muk">묵호 · 씨스포빌</option>
-            </select>
-          </div>
-          <div class="field">
-            <label for="daySel">일정</label>
-            <select id="daySel">
-              <option value="1">1박 2일</option>
-              <option value="2">2박 3일</option>
-            </select>
-          </div>
-        </div>
-        <div class="field-row">
-          <div class="field" id="f_startDate">
-            <label for="startDate">출발일 (포항/묵호 출항일)</label>
-            <input id="startDate" type="date">
-            <span class="err-msg">출발일을 선택해주세요</span>
-          </div>
-          <div class="field">
-            <label for="endDate">도착일 (자동 계산)</label>
-            <input id="endDate" type="text" readonly placeholder="-">
-          </div>
-        </div>
-        <div class="field" style="margin-bottom:14px;">
-          <label>요금 시즌 <span class="badge-auto" id="seasonBadge" style="display:none;">자동 추천</span></label>
-          <div class="pill-group" id="seasonPills" role="radiogroup" aria-label="요금 시즌">
-            <button type="button" class="pill" data-v="0">주중</button>
-            <button type="button" class="pill" data-v="1">주말</button>
-            <button type="button" class="pill" data-v="2">성수기</button>
-          </div>
-          <div class="hint" id="seasonHint">출발일을 선택하면 요일·성수기 기간(7/15~8/20) 기준으로 자동 추천됩니다. 직접 눌러 바꿀 수도 있어요.</div>
-        </div>
+        <h2><span class="num">2</span>운항 시간표 확인 · 일자 · 선박</h2>
+
+        <h3 class="sub">① 선사 운항 시간표 먼저 확인</h3>
         <div class="ship-links">
           <a class="ship-card" target="_blank" rel="noopener" id="link_crz" href="https://www.ulcruise.co.kr/www/flight/timetable?sub_mode=today">
             <div class="sname">울릉크루즈 · 운항시간표</div>
@@ -426,6 +399,59 @@ footer.note{text-align:center;color:var(--steel);font-size:12px;margin-top:26px;
           </a>
         </div>
         <div class="notice" id="scheduleNotice">출발일을 입력하면 위 링크가 해당 날짜(또는 해당 월)로 자동으로 맞춰집니다. 실시간 예약 현황은 반드시 직접 클릭해 최종 확인해주세요.</div>
+
+        <h3 class="sub">② 선박 선택 (가는편 / 오는편)</h3>
+        <div class="field-row">
+          <div class="field">
+            <label for="shipOut">가는편 · 출항지</label>
+            <select id="shipOut">
+              <option value="crz">포항크루즈 · 울릉크루즈</option>
+              <option value="poh">포항쾌속 · 대저해운</option>
+              <option value="muk">묵호 · 씨스포빌</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="shipIn">오는편 · 입항지 <span class="badge-auto" id="shipInBadge">가는편과 동일</span></label>
+            <select id="shipIn">
+              <option value="same">가는편과 동일</option>
+              <option value="crz">포항크루즈 · 울릉크루즈</option>
+              <option value="poh">포항쾌속 · 대저해운</option>
+              <option value="muk">묵호 · 씨스포빌</option>
+            </select>
+          </div>
+        </div>
+        <div class="hint" id="mixHint" style="display:none;margin-bottom:12px;">가는편·오는편 선사가 달라 두 선사 왕복 요금의 평균으로 계산합니다.</div>
+
+        <h3 class="sub">③ 일자 · 시즌</h3>
+        <div class="field-row">
+          <div class="field">
+            <label for="daySel">일정</label>
+            <select id="daySel">
+              <option value="1">1박 2일</option>
+              <option value="2">2박 3일</option>
+            </select>
+          </div>
+          <div class="field" id="f_startDate">
+            <label for="startDate">출발일</label>
+            <input id="startDate" type="date">
+            <span class="err-msg">출발일을 선택해주세요</span>
+          </div>
+        </div>
+        <div class="field-row">
+          <div class="field">
+            <label for="endDate">도착일 (자동 계산)</label>
+            <input id="endDate" type="text" readonly placeholder="-">
+          </div>
+          <div class="field">
+            <label>요금 시즌 <span class="badge-auto" id="seasonBadge" style="display:none;">자동 추천</span></label>
+            <div class="pill-group" id="seasonPills" role="radiogroup" aria-label="요금 시즌">
+              <button type="button" class="pill" data-v="0">주중</button>
+              <button type="button" class="pill" data-v="1">주말</button>
+              <button type="button" class="pill" data-v="2">성수기</button>
+            </div>
+          </div>
+        </div>
+        <div class="hint" id="seasonHint">출발일을 선택하면 요일·성수기 기간(7/15~8/20) 기준으로 자동 추천됩니다. 직접 눌러 바꿀 수도 있어요.</div>
       </div>
 
       <div class="card">
@@ -434,53 +460,48 @@ footer.note{text-align:center;color:var(--steel);font-size:12px;margin-top:26px;
           <div class="field">
             <label for="tourSel">투어 방법</label>
             <select id="tourSel">
-              <option value="md">MD추천 (버스투어)</option>
+              <option value="bus">버스투어</option>
               <option value="taxi">택시투어</option>
-              <option value="rent">렌터카 자유일정</option>
-              <option value="rents">렌터카 + 스노클링</option>
+              <option value="combi">콤비투어 (버스+택시)</option>
+              <option value="rent">렌트카투어</option>
             </select>
           </div>
-          <div class="field">
-            <label for="lodging">숙소</label>
-            <input id="lodging" placeholder="예: OO모텔 3인 1실" autocomplete="off">
+          <div class="field" style="justify-content:flex-end;">
+            <div class="checkline" style="margin-top:0;">
+              <input type="checkbox" id="dokdoChk">
+              <label for="dokdoChk">독도 코스 포함</label>
+            </div>
+            <div class="checkline" id="snorkelWrap" style="display:none;">
+              <input type="checkbox" id="snorkelChk">
+              <label for="snorkelChk">스노클링 추가 (+20,000원/인)</label>
+            </div>
           </div>
         </div>
-        <div class="checkline">
-          <input type="checkbox" id="dokdoChk">
-          <label for="dokdoChk">독도 코스 포함</label>
-        </div>
+        <div class="hint" id="tourHint" style="display:none;">콤비투어는 버스투어·택시투어 요금의 평균으로 계산합니다.</div>
+
+        <h3 class="sub">숙소 (여러 개 추가 가능)</h3>
+        <div id="lodgeList"></div>
+        <div class="lodge-price-hint">추가요금: 패키지에 포함된 기본 숙소와의 차액. 0이면 총액에 반영되지 않고 견적서에 표기만 됩니다.</div>
+        <button type="button" class="btn light" id="addLodgeBtn" style="flex:0;min-width:auto;padding:12px 20px;font-size:13.5px;">+ 숙소 추가</button>
       </div>
 
       <div class="card" id="paxCard">
-        <h2><span class="num">4</span>인원 구성</h2>
-        <div class="tier-row">
-          <div><div class="tier-name">대인 (일반)</div><div class="tier-sub">할인 없음</div></div>
-          <div class="stepper"><button type="button" data-t="cnt_adult" data-d="-1" aria-label="감소">−</button><input type="number" min="0" value="1" id="cnt_adult"><button type="button" data-t="cnt_adult" data-d="1" aria-label="증가">+</button></div>
-        </div>
-        <div class="tier-row">
-          <div><div class="tier-name">소인 / 장애중증</div><div class="tier-sub">50% 할인</div></div>
-          <div class="stepper"><button type="button" data-t="cnt_d50" data-d="-1" aria-label="감소">−</button><input type="number" min="0" value="0" id="cnt_d50"><button type="button" data-t="cnt_d50" data-d="1" aria-label="증가">+</button></div>
-        </div>
-        <div class="tier-row">
-          <div><div class="tier-name">경로 / 장애경증 / 단체중고 / 도민</div><div class="tier-sub">20% 할인</div></div>
-          <div class="stepper"><button type="button" data-t="cnt_d20" data-d="-1" aria-label="감소">−</button><input type="number" min="0" value="0" id="cnt_d20"><button type="button" data-t="cnt_d20" data-d="1" aria-label="증가">+</button></div>
-        </div>
-        <div class="tier-row">
-          <div><div class="tier-name">일반단체 / 중고생</div><div class="tier-sub">10% 할인</div></div>
-          <div class="stepper"><button type="button" data-t="cnt_d10" data-d="-1" aria-label="감소">−</button><input type="number" min="0" value="0" id="cnt_d10"><button type="button" data-t="cnt_d10" data-d="1" aria-label="증가">+</button></div>
-        </div>
+        <h2><span class="num">4</span>인원 구성 <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--steel);">— 등급별 1인당 금액 실시간 표시</span></h2>
+        <div id="tierList"></div>
       </div>
     </div>
 
     <!-- ================= RIGHT : 결과 ================= -->
     <div class="col-result">
       <div class="ticket">
-        <div class="stub-hole left"></div>
-        <div class="stub-hole right"></div>
-        <div class="route">
-          <div class="city" id="ticketShip">포항크루즈</div>
-          <div class="arrow">⇄</div>
-          <div class="city">울릉도</div>
+        <div class="route-wrap">
+          <div class="stub-hole left"></div>
+          <div class="stub-hole right"></div>
+          <div class="route" id="routeBox">
+            <div class="city" id="ticketShip">포항크루즈</div>
+            <div class="arrow">⇄</div>
+            <div class="city">울릉도</div>
+          </div>
         </div>
         <div class="meta-grid">
           <div><span class="k">일정</span><span class="v" id="ticketDays">1박 2일</span></div>
@@ -504,7 +525,7 @@ footer.note{text-align:center;color:var(--steel);font-size:12px;margin-top:26px;
       <div class="card" style="margin-top:14px;">
         <div class="copybar" style="margin-bottom:4px;">
           <h2 style="font-size:15px;margin:0;font-weight:700;color:var(--ink);text-transform:none;letter-spacing:0;">최근 견적 이력</h2>
-          <button class="btn light" id="histClearBtn" style="flex:0;min-width:auto;padding:7px 14px;font-size:12px;">전체 삭제</button>
+          <button class="btn light" id="histClearBtn" style="flex:0;min-width:auto;padding:11px 16px;font-size:12.5px;">전체 삭제</button>
         </div>
         <div id="histList"><div class="hist-empty">아직 생성한 견적이 없습니다. 견적서를 생성하면 자동으로 여기에 쌓입니다.</div></div>
       </div>
@@ -561,7 +582,6 @@ footer.note{text-align:center;color:var(--steel);font-size:12px;margin-top:26px;
   </footer>
 </div>
 
-<!-- 모바일 하단 고정 총액바 -->
 <div class="stickybar" id="stickybar">
   <div>
     <div class="s-label">청구 총액</div>
@@ -575,7 +595,8 @@ footer.note{text-align:center;color:var(--steel);font-size:12px;margin-top:26px;
 <script>
 /* ============================================================
    가격 원장 — 원본 굿투어_견적계산기_2.html과 동일 (수정 금지)
-   PRICES[ship][nights][tier][tour] = [주중,주말,성수기,독도주중,독도주말,독도성수기]
+   PRICES[ship][nights][group][tour] = [주중,주말,성수기,독도주중,독도주말,독도성수기]
+   group: adult(할인없음) d50(50%) d20(20%) d10(10%)  /  tour: md,taxi,rent,rents
    ============================================================ */
 const PRICES = {
 crz:{1:{adult:{md:[361000,412000,442000,421000,472000,502000],taxi:[448000,499000,513000,508000,559000,573000],rent:[320900,371900,385900,380900,431900,445900],rents:[340900,391900,405900,400900,451900,465900]},
@@ -604,28 +625,42 @@ muk:{1:{adult:{md:[317000,352000,394800,359000,394000,436800],taxi:[404000,43900
         d10:{md:[356200,396200,439000,410200,450200,493000],taxi:[443200,483200,526000,497200,537200,580000],rent:[349100,389100,431900,403100,443100,485900],rents:[369100,409100,451900,423100,463100,505900]}}}
 };
 const SHIP_LABEL = {crz:'포항크루즈 (울릉크루즈)', poh:'포항쾌속 (대저해운)', muk:'묵호 (씨스포빌)'};
-const TOUR_LABEL = {md:'MD추천 버스투어', taxi:'택시투어', rent:'렌터카 자유일정', rents:'렌터카+스노클링'};
-const TIER_LABEL = {adult:'대인(일반)', d50:'소인/장애중증(50%)', d20:'경로/장애경증/단체중고/도민(20%)', d10:'일반단체/중고생(10%)'};
+const shortShip = k => SHIP_LABEL[k].split(' (')[0];
+const TOUR_LABEL = {bus:'버스투어', taxi:'택시투어', combi:'콤비투어(버스+택시)', rent:'렌트카투어'};
 const SEASON_LABEL = ['주중','주말','성수기'];
 const STAFF_TEL = {'서민구 팀장':'010-3361-4142','이재훈 팀장':'010-3361-4142'};
 const DEPOSIT_PER_PERSON = 100000;
-/* 성수기 자동 추천 기간 (월-일). 선사 공지에 따라 여기만 수정하면 됨 */
-const PEAK_RANGES = [ {from:'07-15', to:'08-20'} ];
+const PEAK_RANGES = [ {from:'07-15', to:'08-20'} ]; /* 성수기 자동 추천 기간(월-일) */
 
-const DRAFT_KEY = 'gt_quote_draft_v3';
-const HIST_KEY  = 'gt_quote_hist_v3';
+/* 요금 등급 정의 — group은 가격 원장의 할인군 매핑 (행별 드롭다운으로 변경 가능) */
+const TIERS = [
+  {key:'adult',   label:'대인',       group:'adult', def:1},
+  {key:'senior',  label:'경로',       group:'d20',   def:0},
+  {key:'child',   label:'소인',       group:'d50',   def:0},
+  {key:'group',   label:'단체',       group:'d10',   def:0},
+  {key:'dis',     label:'장애',       group:'d50',   def:0},
+  {key:'disCare', label:'장애보호',   group:'d20',   def:0},
+  {key:'vet',     label:'보훈대상자', group:'d20',   def:0},
+];
+const GROUP_LABEL = {adult:'할인 없음', d10:'10% 할인', d20:'20% 할인', d50:'50% 할인'};
+const LODGE_TYPES = ['모텔','호텔','리조트','펜션'];
 
-let season = 0;          // 0 주중 / 1 주말 / 2 성수기
-let seasonIsAuto = true; // 자동 추천 상태인지
-let teamCountManual = false; // 총 팀 인원을 직접 수정했는지 (false면 인원 구성 합계로 자동)
+const DRAFT_KEY = 'gt_quote_draft_v4';
+const HIST_KEY  = 'gt_quote_hist_v4';
+
+let season = 0;
+let seasonIsAuto = true;
+let teamCountManual = false;
 
 /* ============================================================
    유틸
    ============================================================ */
 const $ = id => document.getElementById(id);
 const WEEKDAY = ['일','월','화','수','목','금','토'];
+const esc = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 
 function fmt(n){ return n.toLocaleString('ko-KR') + '원'; }
+function round100(x){ return Math.round(x/100)*100; }
 function fmtDate(dateStr){
   if(!dateStr) return '-';
   const d = new Date(dateStr+'T00:00:00');
@@ -668,11 +703,8 @@ function toast(msg, warn){
   t._timer = setTimeout(()=>{ t.className=''; }, 2400);
 }
 async function copyToClipboard(text){
-  try{
-    await navigator.clipboard.writeText(text);
-    return true;
-  }catch(e){
-    /* fallback: 구형/비보안 컨텍스트 */
+  try{ await navigator.clipboard.writeText(text); return true; }
+  catch(e){
     try{
       const ta = document.createElement('textarea');
       ta.value = text;
@@ -687,10 +719,10 @@ async function copyToClipboard(text){
 }
 
 /* ============================================================
-   시즌 자동 추천: 성수기 기간 우선, 그 외 금·토=주말
+   시즌 자동 추천
    ============================================================ */
 function isPeak(dateStr){
-  const md = dateStr.slice(5); // 'MM-DD'
+  const md = dateStr.slice(5);
   return PEAK_RANGES.some(r => md >= r.from && md <= r.to);
 }
 function autoSeasonFromDate(dateStr){
@@ -698,7 +730,7 @@ function autoSeasonFromDate(dateStr){
   if(isPeak(dateStr)) return 2;
   const d = new Date(dateStr+'T00:00:00');
   const dow = d.getDay();
-  return (dow===5 || dow===6) ? 1 : 0; // 금·토 → 주말
+  return (dow===5 || dow===6) ? 1 : 0;
 }
 function updateSeasonPills(){
   document.querySelectorAll('#seasonPills .pill').forEach(p=>{
@@ -708,35 +740,123 @@ function updateSeasonPills(){
 }
 
 /* ============================================================
+   인원 구성 UI (동적 생성)
+   ============================================================ */
+function buildTierRows(){
+  const list = $('tierList');
+  list.innerHTML = '';
+  TIERS.forEach(t=>{
+    const row = document.createElement('div');
+    row.className = 'tier-row';
+    row.innerHTML =
+      `<div>
+         <div class="tier-name">${t.label}</div>
+         <div class="tier-meta">
+           <select class="tier-group" id="grp_${t.key}" aria-label="${t.label} 할인군">
+             ${Object.keys(GROUP_LABEL).map(g=>`<option value="${g}"${g===t.group?' selected':''}>${GROUP_LABEL[g]}</option>`).join('')}
+           </select>
+           <span class="tier-unit" id="unit_${t.key}">-</span>
+         </div>
+       </div>
+       <div class="stepper">
+         <button type="button" data-t="cnt_${t.key}" data-d="-1" aria-label="${t.label} 감소">−</button>
+         <input type="number" min="0" value="${t.def}" id="cnt_${t.key}" inputmode="numeric">
+         <button type="button" data-t="cnt_${t.key}" data-d="1" aria-label="${t.label} 증가">+</button>
+       </div>`;
+    list.appendChild(row);
+  });
+  list.querySelectorAll('.stepper button').forEach(b=>{
+    b.addEventListener('click', ()=>{
+      const input = $(b.dataset.t);
+      input.value = Math.max(0, (parseInt(input.value,10)||0) + parseInt(b.dataset.d,10));
+      render();
+    });
+  });
+  TIERS.forEach(t=>{
+    $(`cnt_${t.key}`).addEventListener('input', render);
+    $(`grp_${t.key}`).addEventListener('change', render);
+  });
+}
+
+/* ============================================================
+   숙소 리스트 UI (동적)
+   ============================================================ */
+function addLodgeRow(data){
+  const list = $('lodgeList');
+  const row = document.createElement('div');
+  row.className = 'lodge-row';
+  row.innerHTML =
+    `<select class="l-type" aria-label="숙소 유형">${LODGE_TYPES.map(t=>`<option${data&&data.type===t?' selected':''}>${t}</option>`).join('')}</select>
+     <input class="l-name" placeholder="숙소명 · 객실 (예: OO호텔 트윈 2실)" value="${data?esc(data.name||''):''}" autocomplete="off">
+     <input class="l-price" type="number" min="0" step="1000" placeholder="추가요금" value="${data&&data.price?data.price:''}" inputmode="numeric">
+     <button type="button" class="del" aria-label="숙소 삭제">×</button>`;
+  row.querySelector('.del').addEventListener('click', ()=>{ row.remove(); render(); });
+  row.querySelectorAll('select,input').forEach(el=>{
+    el.addEventListener('input', render);
+    el.addEventListener('change', render);
+  });
+  list.appendChild(row);
+}
+function getLodgings(){
+  return [...document.querySelectorAll('#lodgeList .lodge-row')].map(r=>({
+    type: r.querySelector('.l-type').value,
+    name: r.querySelector('.l-name').value.trim(),
+    price: Math.max(0, parseInt(r.querySelector('.l-price').value,10)||0),
+  })).filter(l=>l.name || l.price>0);
+}
+function setLodgings(arr){
+  $('lodgeList').innerHTML = '';
+  (arr&&arr.length?arr:[]).forEach(l=>addLodgeRow(l));
+}
+
+/* ============================================================
    견적 계산
    ============================================================ */
-function getCounts(){
-  return {
-    adult: Math.max(0, parseInt($('cnt_adult').value,10)||0),
-    d50:   Math.max(0, parseInt($('cnt_d50').value,10)||0),
-    d20:   Math.max(0, parseInt($('cnt_d20').value,10)||0),
-    d10:   Math.max(0, parseInt($('cnt_d10').value,10)||0),
-  };
+function getShips(){
+  const out = $('shipOut').value;
+  const inSel = $('shipIn').value;
+  return { out, in: inSel==='same' ? out : inSel, mixed: inSel!=='same' && inSel!==out };
+}
+/* 한 선사 기준 1인 요금 (원장 그대로, 콤비=버스·택시 평균, 렌트+스노클링=rents 열) */
+function shipUnitRaw(ship, nights, group, tour, snorkel, col){
+  const t = PRICES[ship][nights][group];
+  if(tour==='combi') return (t.md[col] + t.taxi[col]) / 2;
+  if(tour==='rent')  return snorkel ? t.rents[col] : t.rent[col];
+  if(tour==='bus')   return t.md[col];
+  return t.taxi[col];
 }
 function computeQuote(){
-  const ship = $('shipSel').value;
+  const ships = getShips();
   const nights = parseInt($('daySel').value,10);
   const tour = $('tourSel').value;
   const dokdo = $('dokdoChk').checked;
-  const counts = getCounts();
-  const table = PRICES[ship][nights];
+  const snorkel = tour==='rent' && $('snorkelChk').checked;
   const col = season + (dokdo ? 3 : 0);
+
   let total = 0;
   const lines = [];
-  for(const tier of Object.keys(counts)){
-    const c = counts[tier];
-    if(c<=0) continue;
-    const unit = table[tier][tour][col];
-    total += unit*c;
-    lines.push({tier, c, unit, sub: unit*c});
-  }
-  const totalPax = counts.adult+counts.d50+counts.d20+counts.d10;
-  return {ship, nights, tour, dokdo, season, counts, totalPax, total, lines};
+  const counts = {};
+  TIERS.forEach(t=>{
+    const c = Math.max(0, parseInt($(`cnt_${t.key}`).value,10)||0);
+    counts[t.key] = c;
+    const group = $(`grp_${t.key}`) ? $(`grp_${t.key}`).value : t.group;
+    /* 가는편·오는편 평균 → 100원 단위 반올림 */
+    const raw = (shipUnitRaw(ships.out, nights, group, tour, snorkel, col)
+               + shipUnitRaw(ships.in,  nights, group, tour, snorkel, col)) / 2;
+    const unit = round100(raw);
+    if($(`unit_${t.key}`)) $(`unit_${t.key}`).textContent = `1인 ${fmt(unit)}`;
+    if(c>0){
+      total += unit*c;
+      lines.push({key:t.key, label:t.label, c, unit, sub:unit*c});
+    }
+  });
+
+  const lodgings = getLodgings();
+  const lodgeExtra = lodgings.reduce((s,l)=>s+l.price, 0);
+  total += lodgeExtra;
+
+  const totalPax = Object.values(counts).reduce((a,b)=>a+b,0);
+  return {ships, nights, tour, dokdo, snorkel, season, counts, totalPax, total, lines, lodgings, lodgeExtra};
 }
 
 /* ============================================================
@@ -768,14 +888,29 @@ function dDayText(dateStr){
 }
 function render(){
   const q = computeQuote();
-  $('ticketShip').textContent = SHIP_LABEL[q.ship].split(' (')[0];
-  $('ticketDays').textContent = q.nights===1 ? '1박 2일' : '2박 3일';
 
+  /* 노선 표시 */
+  if(q.ships.mixed){
+    $('routeBox').innerHTML =
+      `<div class="city small">${shortShip(q.ships.out)}</div><div class="arrow">→</div>`+
+      `<div class="city">울릉도</div>`+
+      `<div class="arrow">→</div><div class="city small">${shortShip(q.ships.in)}</div>`;
+  } else {
+    $('routeBox').innerHTML =
+      `<div class="city" id="ticketShip">${shortShip(q.ships.out)}</div><div class="arrow">⇄</div><div class="city">울릉도</div>`;
+  }
+  $('mixHint').style.display = q.ships.mixed ? 'block' : 'none';
+  $('shipInBadge').style.display = $('shipIn').value==='same' ? 'inline-block' : 'none';
+  $('snorkelWrap').style.display = $('tourSel').value==='rent' ? 'flex' : 'none';
+  $('tourHint').style.display = $('tourSel').value==='combi' ? 'block' : 'none';
+
+  $('ticketDays').textContent = q.nights===1 ? '1박 2일' : '2박 3일';
   const start = $('startDate').value;
   const dday = dDayText(start);
   $('ticketDate').innerHTML = start ? `${fmtDate(start)}${dday?`<span class="dday">${dday}</span>`:''}` : '-';
   $('ticketPax').textContent = q.totalPax+'명';
-  $('ticketSeason').textContent = SEASON_LABEL[q.season] + (q.dokdo? ' · 독도포함':'');
+  $('ticketSeason').textContent = SEASON_LABEL[q.season]
+    + (q.dokdo? ' · 독도':'') + (q.snorkel? ' · 스노클링':'');
   $('totalAmount').textContent = fmt(q.total);
   $('totalAmountKr').textContent = q.total>0 ? numToKorean(q.total)+'정' : '';
   $('stickyAmt').textContent = fmt(q.total);
@@ -783,13 +918,19 @@ function render(){
   $('teamBadge').textContent = teamCountManual ? '직접 수정됨' : '자동 합산';
   $('depositLine').innerHTML = `계약금 <b>${fmt(q.totalPax*DEPOSIT_PER_PERSON)}</b> (${q.totalPax}인 × ${fmt(DEPOSIT_PER_PERSON)})`;
 
+  /* 등급별: 인원 × 1인당 = 소계 */
   const bd = $('breakdown');
   bd.innerHTML = '';
   q.lines.forEach(l=>{
     const row = document.createElement('div');
-    row.innerHTML = `<span>${TIER_LABEL[l.tier]} × ${l.c}명</span><span>${fmt(l.sub)}</span>`;
+    row.innerHTML = `<span>${l.label} ${l.c}명 × ${fmt(l.unit)}</span><span>${fmt(l.sub)}</span>`;
     bd.appendChild(row);
   });
+  if(q.lodgeExtra>0){
+    const row = document.createElement('div');
+    row.innerHTML = `<span>숙소 추가요금</span><span>${fmt(q.lodgeExtra)}</span>`;
+    bd.appendChild(row);
+  }
   if(q.lines.length===0){
     bd.innerHTML = '<div class="empty"><span>인원을 입력해주세요</span><span>-</span></div>';
   }
@@ -798,10 +939,10 @@ function render(){
 }
 
 /* ============================================================
-   일정표 생성
+   일정표
    ============================================================ */
-function buildItineraryRows(nights, tour, dokdo){
-  const tourWord = (tour==='md') ? '버스투어' : (tour==='taxi') ? '택시투어' : (tour==='rents') ? '렌터카' : '렌터카 자유일정';
+function buildItineraryRows(nights, tour, dokdo, snorkel){
+  const tourWord = {bus:'버스투어', taxi:'택시투어', combi:'콤비투어', rent:'렌터카'}[tour] || '투어';
   const rows = [];
   rows.push(['1일차','오전','승선권 수령 및 승선','']);
   rows.push(['1일차','','출항 → 울릉도','']);
@@ -816,7 +957,7 @@ function buildItineraryRows(nights, tour, dokdo){
   } else if(nights===2){
     rows.push(['2일차','','◆ 선택관광 or 자유일정','']);
   }
-  if(tour==='rents'){
+  if(snorkel){
     rows.push(['2일차','','◆ 울릉도 바다 스노클링 체험','기상에 따라 변경']);
   }
   rows.push(['2일차','','중식','']);
@@ -864,59 +1005,76 @@ function rowsToHtmlTable(rows){
    검증 + 견적서 생성
    ============================================================ */
 function validate(){
-  let ok = true;
+  const custF = $('f_custName');
+  custF.classList.remove('error');
+  if(!$('custName').value.trim()){
+    custF.classList.add('error');
+    toast('고객명을 입력해주세요', true);
+    custF.scrollIntoView({behavior:'smooth', block:'center'});
+    return false;
+  }
   const startF = $('f_startDate');
   startF.classList.remove('error');
-  if(!$('startDate').value){ startF.classList.add('error'); ok = false; }
-
+  if(!$('startDate').value){
+    startF.classList.add('error');
+    toast('출발일을 선택해주세요', true);
+    startF.scrollIntoView({behavior:'smooth', block:'center'});
+    return false;
+  }
   const q = computeQuote();
   if(q.totalPax < 1){
-    ok = false;
     toast('인원을 1명 이상 입력해주세요', true);
     $('paxCard').scrollIntoView({behavior:'smooth', block:'center'});
     return false;
   }
-  if(!ok){
-    toast('출발일을 선택해주세요', true);
-    startF.scrollIntoView({behavior:'smooth', block:'center'});
-  }
-  return ok;
+  return true;
+}
+
+function shipText(ships){
+  return ships.mixed
+    ? `가는편 ${SHIP_LABEL[ships.out]} / 오는편 ${SHIP_LABEL[ships.in]}`
+    : SHIP_LABEL[ships.out];
+}
+function lodgeText(lodgings){
+  if(!lodgings.length) return '(숙소 미정)';
+  return lodgings.map(l=>{
+    let s = `${l.type} ${l.name||'미정'}`;
+    if(l.price>0) s += `(추가 ${fmt(l.price)})`;
+    return s;
+  }).join(', ');
 }
 
 function generateQuote(fromSticky){
   if(!validate()) return null;
 
   const q = computeQuote();
-  const custName = $('custName').value.trim() || '고객';
+  const custName = $('custName').value.trim();
   const staffName = $('staffName').value;
   const staffTel = STAFF_TEL[staffName] || $('staffTel').value;
   const startDate = $('startDate').value;
-  const endDate = addDays(startDate, q.nights); /* 도착일 = 출발일 + 박수 */
-  const lodging = $('lodging').value.trim() || '(숙소 미정)';
+  const endDate = addDays(startDate, q.nights);
   const deposit = q.totalPax*DEPOSIT_PER_PERSON;
-  /* "N인팀" 표기: 직접 수정한 총 팀 인원 우선 (무료 유아 등 포함), 금액·계약금은 요금등급 합계 기준 */
   const teamPax = teamCountManual ? (parseInt($('teamCount').value,10) || q.totalPax) : q.totalPax;
-
-  let paxLine = [];
-  if(q.counts.adult) paxLine.push(`대인 ${q.counts.adult}인 (인당 ${fmt(q.lines.find(l=>l.tier==='adult')?.unit||0)})`);
-  if(q.counts.d50) paxLine.push(`소인/장애중증 ${q.counts.d50}인 (인당 ${fmt(q.lines.find(l=>l.tier==='d50')?.unit||0)})`);
-  if(q.counts.d20) paxLine.push(`경로 등 ${q.counts.d20}인 (인당 ${fmt(q.lines.find(l=>l.tier==='d20')?.unit||0)})`);
-  if(q.counts.d10) paxLine.push(`단체/중고생 ${q.counts.d10}인 (인당 ${fmt(q.lines.find(l=>l.tier==='d10')?.unit||0)})`);
-
-  const rows = buildItineraryRows(q.nights, q.tour, q.dokdo);
   const seasonWord = SEASON_LABEL[q.season];
 
+  /* 등급별 1인당 × 인원 = 소계 라인 */
+  const paxLines = q.lines.map(l=>`   - ${l.label} ${l.c}명 × 1인 ${fmt(l.unit)} = ${fmt(l.sub)}`);
+  if(q.lodgeExtra>0) paxLines.push(`   - 숙소 추가요금 = ${fmt(q.lodgeExtra)}`);
+
+  const rows = buildItineraryRows(q.nights, q.tour, q.dokdo, q.snorkel);
+  const tourFull = TOUR_LABEL[q.tour] + (q.snorkel?'+스노클링':'');
+
   const text =
-`현지 여행사 굿투어  ${SHIP_LABEL[q.ship]}   울릉도여행 일정 및 견적서
+`현지 여행사 굿투어  ${shipText(q.ships)}   울릉도여행 일정 및 견적서
 수신 ${custName}님   담당 ${staffName}   연락처 ${staffTel}
 발신 굿투어
 
-1. 건   명 : ${custName}님 ${teamPax}인팀 ${SHIP_LABEL[q.ship]} ${TOUR_LABEL[q.tour]}${q.dokdo?'+독도':''}
+1. 건   명 : ${custName}님 ${teamPax}인팀 ${shipText(q.ships)} ${tourFull}${q.dokdo?'+독도':''}
 2. 기   간 : ${fmtDate(startDate)} ~ ${fmtDate(endDate)} (${q.nights===1?'1박2일':'2박3일'} · ${seasonWord})
 3. 제   공 : 굿투어주식회사(사업자: 506-81-87523) / 계좌: 농협 351-0693-3158-03
-4. 포   함 : 왕복승선권 + ${lodging} + ${TOUR_LABEL[q.tour]}${q.dokdo?' + 독도 탐방':''}
+4. 포   함 : 왕복승선권 + ${lodgeText(q.lodgings)} + ${tourFull}${q.dokdo?' + 독도 탐방':''}
 5. 청구금 : 총금액 ${fmt(q.total)} ${numToKorean(q.total)}정
-   (${paxLine.join(', ')})
+${paxLines.join('\n')}
    * 카드/현금영수증 시 부가세 10% 별도 발생됩니다. 계약금은 1인당 ${fmt(DEPOSIT_PER_PERSON)}, 총 ${fmt(deposit)}입니다.
 
 ${rowsToTabText(rows)}
@@ -926,24 +1084,26 @@ ${rowsToTabText(rows)}
 
   $('quoteText').value = text;
 
-  /* ---- 이미지용 문서 채우기 ---- */
+  /* ---- 이미지용 문서 ---- */
   $('d_cust').textContent = custName+'님';
   $('d_staff').textContent = staffName || '굿투어';
   $('d_tel').textContent = staffTel || '-';
+  const paxHtml = q.lines.map(l=>`   - ${l.label} ${l.c}명 × 1인 ${fmt(l.unit)} = <b>${fmt(l.sub)}</b>`).join('\n')
+    + (q.lodgeExtra>0 ? `\n   - 숙소 추가요금 = <b>${fmt(q.lodgeExtra)}</b>` : '');
   $('d_summary').innerHTML =
-    `<b>1. 건   명</b> : ${custName}님 ${teamPax}인팀 ${SHIP_LABEL[q.ship]} ${TOUR_LABEL[q.tour]}${q.dokdo?'+독도':''}\n`+
+    `<b>1. 건   명</b> : ${esc(custName)}님 ${teamPax}인팀 ${shipText(q.ships)} ${tourFull}${q.dokdo?'+독도':''}\n`+
     `<b>2. 기   간</b> : ${fmtDate(startDate)} ~ ${fmtDate(endDate)}  (${q.nights===1?'1박2일':'2박3일'} · ${seasonWord})\n`+
     `<b>3. 제   공</b> : 굿투어주식회사(사업자: 506-81-87523) / 계좌: 농협 351-0693-3158-03\n`+
-    `<b>4. 포   함</b> : 왕복승선권 + ${lodging} + ${TOUR_LABEL[q.tour]}${q.dokdo?' + 독도 탐방':''}\n`+
-    `<b>5. 청구금</b> : 총 ${fmt(q.total)} (${numToKorean(q.total)}정) — ${paxLine.join(', ')}\n`+
+    `<b>4. 포   함</b> : 왕복승선권 + ${esc(lodgeText(q.lodgings))} + ${tourFull}${q.dokdo?' + 독도 탐방':''}\n`+
+    `<b>5. 청구금</b> : 총 <b>${fmt(q.total)}</b> (${numToKorean(q.total)}정)\n`+
+    paxHtml + `\n`+
     `     계약금 1인당 ${fmt(DEPOSIT_PER_PERSON)}, 총 ${fmt(deposit)} · 카드/현금영수증 시 부가세 10% 별도`;
   $('d_itin').innerHTML = rowsToHtmlTable(rows);
 
-  /* ---- 이력 저장 ---- */
   pushHistory({
     ts: Date.now(),
-    custName, total: q.total, totalPax: q.totalPax,
-    ship: q.ship, nights: q.nights, startDate,
+    custName, total: q.total, totalPax: teamPax,
+    ship: q.ships.out, nights: q.nights, startDate,
     snapshot: collectForm(),
   });
 
@@ -956,38 +1116,44 @@ ${rowsToTabText(rows)}
    자동 저장 / 복원
    ============================================================ */
 function collectForm(){
-  return {
+  const f = {
     custName: $('custName').value,
     staffName: $('staffName').value,
-    shipSel: $('shipSel').value,
+    shipOut: $('shipOut').value,
+    shipIn: $('shipIn').value,
     daySel: $('daySel').value,
     startDate: $('startDate').value,
     tourSel: $('tourSel').value,
-    lodging: $('lodging').value,
     dokdo: $('dokdoChk').checked,
-    cnt_adult: $('cnt_adult').value,
-    cnt_d50: $('cnt_d50').value,
-    cnt_d20: $('cnt_d20').value,
-    cnt_d10: $('cnt_d10').value,
+    snorkel: $('snorkelChk').checked,
+    lodgings: getLodgings(),
     teamCount: $('teamCount').value,
     teamCountManual,
     season, seasonIsAuto,
+    counts:{}, groups:{},
   };
+  TIERS.forEach(t=>{
+    f.counts[t.key] = $(`cnt_${t.key}`).value;
+    f.groups[t.key] = $(`grp_${t.key}`).value;
+  });
+  return f;
 }
 function applyForm(f){
   if(!f) return;
   $('custName').value = f.custName||'';
   $('staffName').value = f.staffName||'서민구 팀장';
-  $('shipSel').value = f.shipSel||'crz';
+  $('shipOut').value = f.shipOut||'crz';
+  $('shipIn').value = f.shipIn||'same';
   $('daySel').value = f.daySel||'1';
   $('startDate').value = f.startDate||'';
-  $('tourSel').value = f.tourSel||'md';
-  $('lodging').value = f.lodging||'';
+  $('tourSel').value = f.tourSel||'bus';
   $('dokdoChk').checked = !!f.dokdo;
-  $('cnt_adult').value = f.cnt_adult??1;
-  $('cnt_d50').value = f.cnt_d50??0;
-  $('cnt_d20').value = f.cnt_d20??0;
-  $('cnt_d10').value = f.cnt_d10??0;
+  $('snorkelChk').checked = !!f.snorkel;
+  setLodgings(f.lodgings);
+  TIERS.forEach(t=>{
+    $(`cnt_${t.key}`).value = (f.counts&&f.counts[t.key])??t.def;
+    if(f.groups&&f.groups[t.key]) $(`grp_${t.key}`).value = f.groups[t.key];
+  });
   season = f.season??0;
   seasonIsAuto = f.seasonIsAuto??true;
   teamCountManual = !!f.teamCountManual;
@@ -1038,13 +1204,14 @@ function renderHistory(){
     item.className = 'hist-item';
     item.innerHTML =
       `<div style="flex:1;min-width:0;">
-         <div class="h-main">${e.custName}님 · ${e.totalPax}명 · ${SHIP_LABEL[e.ship]?.split(' (')[0]||''} ${e.nights===1?'1박2일':'2박3일'}</div>
+         <div class="h-main">${esc(e.custName)}님 · ${e.totalPax}명 · ${shortShip(e.ship)||''} ${e.nights===1?'1박2일':'2박3일'}</div>
          <div class="h-sub">${e.startDate ? fmtDate(e.startDate)+' 출발 · ' : ''}${when} 생성</div>
        </div>
        <div class="h-amt">${fmt(e.total)}</div>
        <button class="h-del" aria-label="삭제" data-i="${idx}">×</button>`;
     item.addEventListener('click',(ev)=>{
       if(ev.target.classList.contains('h-del')) return;
+      if(!confirm(`${e.custName}님 견적을 불러올까요?\n(작성 중인 입력은 이 견적으로 교체됩니다)`)) return;
       applyForm(e.snapshot);
       render();
       toast(`${e.custName}님 견적을 불러왔습니다`);
@@ -1094,12 +1261,15 @@ $('staffName').addEventListener('change', ()=>{
   render();
 });
 
-['shipSel','tourSel','dokdoChk','cnt_adult','cnt_d50','cnt_d20','cnt_d10','lodging','custName'].forEach(id=>{
+['shipOut','shipIn','tourSel','dokdoChk','snorkelChk','custName'].forEach(id=>{
   $(id).addEventListener('input', render);
   $(id).addEventListener('change', render);
 });
 
-/* 총 팀 인원: 직접 수정하면 수동 모드, 비우거나 합계와 같으면 자동 복귀 */
+$('custName').addEventListener('input', ()=>{
+  if($('custName').value.trim()) $('f_custName').classList.remove('error');
+});
+
 $('teamCount').addEventListener('input', ()=>{
   const raw = $('teamCount').value.trim();
   const v = parseInt(raw,10);
@@ -1110,15 +1280,7 @@ $('teamCount').addEventListener('input', ()=>{
   saveDraft();
 });
 
-/* 스테퍼 버튼 */
-document.querySelectorAll('.stepper button').forEach(b=>{
-  b.addEventListener('click', ()=>{
-    const input = $(b.dataset.t);
-    const v = Math.max(0, (parseInt(input.value,10)||0) + parseInt(b.dataset.d,10));
-    input.value = v;
-    render();
-  });
-});
+$('addLodgeBtn').addEventListener('click', ()=>{ addLodgeRow(); });
 
 $('genBtn').addEventListener('click', ()=>generateQuote(false));
 $('stickyGenBtn').addEventListener('click', ()=>generateQuote(true));
@@ -1137,18 +1299,12 @@ $('copyBtn').addEventListener('click', async ()=>{
 });
 
 $('imgBtn').addEventListener('click', async ()=>{
-  if(!$('startDate').value || computeQuote().totalPax<1){
-    if(!validate()) return;
-  }
+  if(!validate()) return;
   if(typeof html2canvas === 'undefined'){
     toast('이미지 생성 라이브러리를 불러오지 못했습니다. 인터넷 연결을 확인해주세요', true);
     return;
   }
-  if(!$('quoteText').value.trim()){
-    if(!generateQuote(false)) return;
-  } else {
-    generateQuote(false);
-  }
+  if(!generateQuote(false)) return;
   const node = $('docSheet');
   const btn = $('imgBtn');
   btn.disabled = true; btn.textContent = '이미지 생성 중...';
@@ -1171,18 +1327,25 @@ $('imgBtn').addEventListener('click', async ()=>{
 
 $('resetBtn').addEventListener('click', ()=>{
   if(!confirm('모든 입력을 초기화할까요? (견적 이력은 유지됩니다)')) return;
-  ['custName','lodging'].forEach(id=>$(id).value='');
+  $('custName').value='';
   $('staffName').selectedIndex = 0;
   $('staffTel').value = '010-3361-4142';
+  $('shipOut').value='crz';
+  $('shipIn').value='same';
+  $('daySel').value='1';
   $('startDate').value='';
   $('endDate').value='';
-  $('cnt_adult').value=1;
-  $('cnt_d50').value=0;
-  $('cnt_d20').value=0;
-  $('cnt_d10').value=0;
+  $('tourSel').value='bus';
   $('dokdoChk').checked=false;
-  season=0; seasonIsAuto=true;
-  teamCountManual=false;
+  $('snorkelChk').checked=false;
+  setLodgings([]);
+  TIERS.forEach(t=>{
+    $(`cnt_${t.key}`).value = t.def;
+    $(`grp_${t.key}`).value = t.group;
+  });
+  season=0; seasonIsAuto=true; teamCountManual=false;
+  $('f_custName').classList.remove('error');
+  $('f_startDate').classList.remove('error');
   updateSeasonPills();
   $('quoteText').value='';
   $('d_cust').textContent='-';
@@ -1204,6 +1367,7 @@ $('histClearBtn').addEventListener('click', ()=>{
 /* ============================================================
    초기화
    ============================================================ */
+buildTierRows();
 loadDraft();
 updateSeasonPills();
 renderHistory();
