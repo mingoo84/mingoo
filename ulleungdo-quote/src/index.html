@@ -1,0 +1,1192 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>굿투어 울릉도 견적 계산기 v3</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+<style>
+/* ============================================================
+   울릉도 바다 테마 — 디자인 토큰
+   ============================================================ */
+:root{
+  --sea-deep:#04263b;        /* 울릉 심해 네이비 */
+  --sea-mid:#0a3d55;
+  --sea-line:#123f58;
+  --wave-green:#00e88f;      /* 파도 형광 그린 (브랜드 액센트) */
+  --wave-green-dark:#00785c;
+  --wave-green-soft:#d2f7e6;
+  --wave-green-bg:#e8fbf2;
+  --pressed:#009a68;
+  --canvas:#ffffff;
+  --surface:#f7faf9;
+  --surface-soft:#f1f5f4;
+  --hairline:#e2e8e6;
+  --hairline-strong:#c3cfcb;
+  --ink:#0b2533;
+  --slate:#41586b;
+  --steel:#5f7385;
+  --stone:#8fa0ae;
+  --on-dark:#ffffff;
+  --on-dark-muted:#9db4c0;
+  --warn-bg:#fff7e0;
+  --warn-text:#8a6a2f;
+  --danger:#e05252;
+  --radius:14px;
+  --shadow:0 2px 14px rgba(4,38,59,.07);
+}
+*{box-sizing:border-box;}
+html{-webkit-text-size-adjust:100%;}
+body{
+  margin:0;
+  background:var(--surface-soft);
+  color:var(--ink);
+  font-family:'Pretendard Variable',Pretendard,-apple-system,BlinkMacSystemFont,'Malgun Gothic',sans-serif;
+  -webkit-font-smoothing:antialiased;
+  padding-bottom:calc(84px + env(safe-area-inset-bottom)); /* sticky bar 공간 */
+}
+.wrap{max-width:1180px;margin:0 auto;padding:16px 14px 40px;}
+@media(min-width:961px){ .wrap{padding:28px 20px 60px;} body{padding-bottom:0;} }
+
+/* ============================================================
+   헤더
+   ============================================================ */
+header.top{
+  background:linear-gradient(135deg,var(--sea-deep) 0%,#06344c 60%,#0a4a63 100%);
+  border-radius:var(--radius);
+  padding:22px 22px 26px;
+  color:var(--on-dark);
+  position:relative;overflow:hidden;margin-bottom:16px;
+}
+header.top .waves{position:absolute;left:0;right:0;bottom:-2px;opacity:.5;}
+header.top .eyebrow{
+  font-size:11px;letter-spacing:1.6px;text-transform:uppercase;color:var(--wave-green);
+  font-weight:700;margin-bottom:7px;
+}
+header.top h1{font-size:22px;margin:0 0 6px;font-weight:700;letter-spacing:-.4px;line-height:1.3;}
+header.top p{margin:0;color:var(--on-dark-muted);font-size:13px;max-width:560px;line-height:1.6;}
+@media(min-width:961px){
+  header.top{padding:30px 34px;}
+  header.top h1{font-size:28px;}
+  header.top p{font-size:14px;}
+}
+
+/* ============================================================
+   레이아웃
+   ============================================================ */
+.grid{display:grid;grid-template-columns:1fr;gap:14px;align-items:start;}
+@media(min-width:961px){
+  .grid{grid-template-columns:1.15fr 1fr;gap:20px;}
+  .col-result{position:sticky;top:20px;}
+}
+
+.card{
+  background:var(--canvas);
+  border-radius:var(--radius);
+  border:1px solid var(--hairline);
+  box-shadow:var(--shadow);
+  padding:18px 18px;
+  margin-bottom:14px;
+}
+@media(min-width:961px){ .card{padding:22px 24px;margin-bottom:20px;} }
+.card h2{
+  font-size:11px;text-transform:uppercase;letter-spacing:1.2px;
+  color:var(--wave-green-dark);margin:0 0 16px;display:flex;align-items:center;gap:9px;font-weight:700;
+}
+.card h2 .num{
+  width:22px;height:22px;border-radius:50%;background:var(--wave-green-dark);color:var(--on-dark);
+  font-size:11px;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-weight:700;
+}
+
+.field-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;}
+.field{display:flex;flex-direction:column;gap:6px;}
+.field label{font-size:12.5px;color:var(--steel);font-weight:600;}
+.field input,.field select{
+  border:1.5px solid var(--hairline-strong);border-radius:10px;padding:10px 12px;height:46px;
+  font-family:inherit;font-size:15px;color:var(--ink);background:var(--canvas);
+  outline:none;transition:border-color .15s,box-shadow .15s;width:100%;
+  -webkit-appearance:none;appearance:none;
+}
+.field select{
+  background-image:url("data:image/svg+xml,%3Csvg width='12' height='8' viewBox='0 0 12 8' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1.5L6 6.5L11 1.5' stroke='%235f7385' stroke-width='1.8' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;background-position:right 13px center;padding-right:34px;
+}
+.field input:focus,.field select:focus{border-color:var(--wave-green-dark);box-shadow:0 0 0 3px rgba(0,232,143,.15);}
+.field input[readonly]{background:var(--surface-soft);color:var(--steel);}
+.field.error input,.field.error select{border-color:var(--danger);}
+.field .err-msg{font-size:11.5px;color:var(--danger);display:none;}
+.field.error .err-msg{display:block;}
+
+.pill-group{display:flex;gap:8px;flex-wrap:wrap;}
+.pill{
+  border:1.5px solid var(--hairline);border-radius:9999px;padding:9px 18px;font-size:13.5px;
+  cursor:pointer;background:var(--canvas);color:var(--steel);font-weight:600;transition:.15s;
+  user-select:none;font-family:inherit;
+}
+.pill.active{background:var(--sea-deep);border-color:var(--sea-deep);color:var(--on-dark);}
+.pill:focus-visible{outline:2px solid var(--wave-green-dark);outline-offset:2px;}
+.hint{font-size:12px;color:var(--steel);margin-top:6px;line-height:1.55;}
+.badge-auto{
+  display:inline-block;font-size:10.5px;font-weight:700;padding:2px 8px;border-radius:9999px;
+  background:var(--wave-green-soft);color:var(--wave-green-dark);margin-left:6px;vertical-align:1px;
+}
+
+.tier-row{
+  display:grid;grid-template-columns:1fr 108px;gap:12px;align-items:center;
+  padding:11px 0;border-bottom:1px dashed var(--hairline);
+}
+.tier-row:last-child{border-bottom:none;}
+.tier-name{font-size:14px;font-weight:700;}
+.tier-sub{font-size:11px;color:var(--wave-green-dark);font-weight:700;background:var(--wave-green-soft);
+  display:inline-block;padding:2px 9px;border-radius:9999px;margin-top:4px;}
+.stepper{display:flex;align-items:stretch;border:1.5px solid var(--hairline-strong);border-radius:10px;overflow:hidden;height:44px;}
+.stepper button{
+  width:34px;border:none;background:var(--surface-soft);color:var(--slate);font-size:18px;font-weight:700;
+  cursor:pointer;font-family:inherit;padding:0;
+}
+.stepper button:active{background:var(--wave-green-soft);}
+.stepper input{
+  width:40px;border:none;text-align:center;font-size:15px;font-weight:700;font-family:inherit;
+  color:var(--ink);outline:none;-moz-appearance:textfield;
+}
+.stepper input::-webkit-outer-spin-button,.stepper input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0;}
+
+.checkline{display:flex;align-items:center;gap:10px;margin-top:10px;}
+.checkline input{width:19px;height:19px;accent-color:var(--wave-green-dark);}
+.checkline label{font-size:14px;font-weight:700;}
+
+/* ============================================================
+   티켓 (견적 요약)
+   ============================================================ */
+.ticket{
+  background:linear-gradient(160deg,var(--sea-deep) 0%,#06344c 100%);
+  color:var(--on-dark);
+  border-radius:18px;
+  position:relative;
+  padding:22px 20px 18px;
+  overflow:visible;
+  box-shadow:0 8px 28px rgba(4,38,59,.25);
+}
+.ticket .stub-hole{
+  position:absolute;top:118px;width:22px;height:22px;background:var(--surface-soft);border-radius:50%;
+}
+.ticket .stub-hole.left{left:-11px;}
+.ticket .stub-hole.right{right:-11px;}
+.ticket .route{
+  display:flex;justify-content:space-between;align-items:center;
+  border-bottom:1px dashed rgba(255,255,255,.22);padding-bottom:15px;margin-bottom:15px;
+}
+.ticket .route .city{font-size:19px;font-weight:700;letter-spacing:-.3px;}
+.ticket .route .arrow{color:var(--wave-green);font-size:17px;}
+.ticket .meta-grid{display:grid;grid-template-columns:1fr 1fr;gap:11px 18px;margin-bottom:14px;}
+.ticket .meta-grid span.k{display:block;font-size:10.5px;color:var(--on-dark-muted);text-transform:uppercase;letter-spacing:.07em;margin-bottom:3px;}
+.ticket .meta-grid span.v{font-size:14.5px;font-weight:700;font-variant-numeric:tabular-nums;}
+.ticket .dday{
+  display:inline-block;font-size:10.5px;font-weight:800;color:var(--sea-deep);
+  background:var(--wave-green);border-radius:9999px;padding:2px 9px;margin-left:7px;vertical-align:2px;
+}
+.ticket .total-box{
+  background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.15);
+  border-radius:14px;padding:15px 17px;margin-top:4px;
+}
+.ticket .total-box .label{font-size:12px;color:var(--on-dark-muted);letter-spacing:.04em;}
+.ticket .total-box .amount{font-size:30px;font-weight:800;color:var(--wave-green);margin-top:2px;font-variant-numeric:tabular-nums;letter-spacing:-.5px;}
+.ticket .total-box .amount-kr{font-size:12px;color:var(--on-dark-muted);margin-top:3px;}
+.ticket .total-box .deposit{font-size:12px;color:var(--on-dark-muted);margin-top:8px;padding-top:8px;border-top:1px dashed rgba(255,255,255,.15);}
+.ticket .total-box .deposit b{color:#fff;font-weight:700;}
+.breakdown{margin-top:13px;font-size:13px;}
+.breakdown div{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid rgba(255,255,255,.09);}
+.breakdown div span:last-child{font-variant-numeric:tabular-nums;color:var(--wave-green);font-weight:700;}
+.breakdown div.empty span{color:var(--on-dark-muted);font-weight:400;}
+
+.btnbar{display:flex;gap:10px;margin-top:16px;flex-wrap:wrap;}
+.btn{
+  border:none;border-radius:9999px;padding:12px 22px;font-weight:700;font-size:14.5px;
+  cursor:pointer;font-family:inherit;transition:.15s;flex:1;min-width:130px;
+}
+.btn.primary{background:var(--wave-green);color:var(--sea-deep);}
+.btn.primary:active{background:var(--pressed);color:#fff;}
+.btn.ghost{background:transparent;color:var(--on-dark);border:1.5px solid rgba(255,255,255,.3);}
+.btn.ghost:active{background:rgba(255,255,255,.1);}
+.btn.light{background:var(--surface-soft);color:var(--ink);border:1.5px solid var(--hairline);}
+.btn.light:active{background:var(--wave-green-soft);}
+.btn:disabled{opacity:.55;cursor:not-allowed;}
+
+/* ============================================================
+   선사 링크
+   ============================================================ */
+.ship-links{display:grid;grid-template-columns:1fr;gap:10px;}
+@media(min-width:701px){.ship-links{grid-template-columns:repeat(3,1fr);gap:12px;}}
+.ship-card{
+  border:1.5px solid var(--hairline);border-radius:12px;padding:14px;text-decoration:none;color:var(--ink);
+  display:block;transition:.15s;background:var(--canvas);
+}
+.ship-card:active,.ship-card:hover{border-color:var(--wave-green-dark);box-shadow:0 2px 10px rgba(0,120,92,.12);}
+.ship-card .sname{font-weight:700;font-size:14px;margin-bottom:3px;}
+.ship-card .sdesc{font-size:12px;color:var(--steel);margin-bottom:9px;line-height:1.5;}
+.ship-card .go{font-size:12px;color:var(--wave-green-dark);font-weight:700;}
+.notice{
+  margin-top:12px;background:var(--wave-green-bg);border:1px solid var(--wave-green-soft);border-radius:10px;
+  padding:12px 14px;font-size:12.5px;color:var(--wave-green-dark);line-height:1.6;
+}
+
+/* ============================================================
+   견적 문구 & 이력
+   ============================================================ */
+.quote-out{background:var(--canvas);border:1px solid var(--hairline);border-radius:var(--radius);box-shadow:var(--shadow);padding:18px;margin-bottom:14px;}
+@media(min-width:961px){.quote-out{padding:22px 24px;margin-bottom:20px;}}
+.quote-out h2{font-size:16px;margin:0;font-weight:700;}
+.quote-out textarea{
+  width:100%;min-height:300px;border:1.5px solid var(--hairline-strong);border-radius:10px;padding:14px;
+  font-family:'Pretendard Variable',Pretendard,monospace;font-size:12.5px;line-height:1.7;color:var(--ink);
+  resize:vertical;background:var(--surface);outline:none;
+}
+.copybar{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;gap:10px;flex-wrap:wrap;}
+.copybar .msg{font-size:12.5px;color:var(--wave-green-dark);font-weight:700;opacity:0;transition:opacity .2s;}
+.copybar .msg.show{opacity:1;}
+
+.hist-item{
+  display:flex;justify-content:space-between;align-items:center;gap:10px;
+  padding:11px 4px;border-bottom:1px dashed var(--hairline);cursor:pointer;border-radius:6px;
+}
+.hist-item:active{background:var(--wave-green-bg);}
+.hist-item:last-child{border-bottom:none;}
+.hist-item .h-main{font-size:13.5px;font-weight:700;}
+.hist-item .h-sub{font-size:11.5px;color:var(--steel);margin-top:2px;}
+.hist-item .h-amt{font-size:13.5px;font-weight:800;color:var(--wave-green-dark);white-space:nowrap;font-variant-numeric:tabular-nums;}
+.hist-item .h-del{
+  border:none;background:none;color:var(--stone);font-size:16px;cursor:pointer;padding:4px 6px;flex-shrink:0;
+}
+.hist-empty{font-size:12.5px;color:var(--stone);padding:8px 0;}
+
+/* ============================================================
+   견적서 문서 (PNG 출력용)
+   ============================================================ */
+.doc-wrap{overflow-x:auto;padding-top:4px;-webkit-overflow-scrolling:touch;}
+#docSheet{
+  width:820px;background:#ffffff;color:var(--ink);margin:0 auto;
+  font-family:'Pretendard Variable',Pretendard,'Malgun Gothic','Apple SD Gothic Neo',sans-serif;
+  border:2px solid var(--sea-deep);
+}
+#docSheet .doc-hero{
+  position:relative;height:110px;overflow:hidden;
+  background:linear-gradient(120deg,#04263b 0%,#0a3d55 55%,#0d5a74 100%);
+  display:flex;align-items:center;justify-content:center;
+}
+#docSheet .doc-hero svg.island{position:absolute;left:0;right:0;bottom:0;width:100%;}
+#docSheet .doc-hero .doc-hero-title{
+  position:relative;color:#fff;font-size:20px;font-weight:800;text-align:center;letter-spacing:.01em;line-height:1.45;
+}
+#docSheet .doc-hero .doc-hero-title small{display:block;font-size:11px;font-weight:600;color:#7fe8c0;letter-spacing:2.5px;margin-bottom:3px;}
+#docSheet .doc-info-table{width:100%;border-collapse:collapse;font-size:12.5px;}
+#docSheet .doc-info-table td{border:1px solid var(--hairline-strong);padding:8px 10px;}
+#docSheet .doc-info-table td.lbl{background:var(--surface-soft);font-weight:800;width:70px;white-space:nowrap;}
+#docSheet .doc-block{padding:13px 16px;font-size:12.5px;line-height:2.0;border-bottom:1px solid var(--hairline-strong);white-space:pre-line;}
+#docSheet .doc-block b{color:var(--wave-green-dark);}
+#docSheet table.itin{width:100%;border-collapse:collapse;font-size:12px;}
+#docSheet table.itin th{background:var(--sea-mid);color:#fff;padding:8px 6px;border:1px solid var(--sea-deep);font-size:11.5px;}
+#docSheet table.itin td{border:1px solid var(--hairline);padding:6px 8px;vertical-align:top;}
+#docSheet table.itin td.day{background:var(--surface-soft);font-weight:800;text-align:center;white-space:nowrap;}
+#docSheet table.itin td.time{white-space:nowrap;color:var(--steel);}
+#docSheet table.itin td.note{color:var(--warn-text);background:var(--warn-bg);font-size:11px;white-space:nowrap;}
+#docSheet .doc-footer{text-align:center;font-size:13.5px;font-weight:700;color:var(--ink);padding:13px;background:var(--surface-soft);line-height:1.6;}
+#docSheet .doc-footer-warn{color:#D64545;margin-top:4px;font-size:12px;}
+
+/* ============================================================
+   모바일 하단 고정 바
+   ============================================================ */
+.stickybar{
+  position:fixed;left:0;right:0;bottom:0;z-index:50;
+  background:rgba(4,38,59,.97);backdrop-filter:blur(8px);
+  padding:12px 16px calc(12px + env(safe-area-inset-bottom));
+  display:flex;align-items:center;justify-content:space-between;gap:14px;
+  box-shadow:0 -4px 20px rgba(4,38,59,.3);
+}
+.stickybar .s-label{font-size:10.5px;color:var(--on-dark-muted);letter-spacing:.05em;}
+.stickybar .s-amt{font-size:21px;font-weight:800;color:var(--wave-green);font-variant-numeric:tabular-nums;letter-spacing:-.4px;}
+.stickybar .s-btn{
+  border:none;border-radius:9999px;background:var(--wave-green);color:var(--sea-deep);
+  font-weight:800;font-size:14px;padding:12px 22px;cursor:pointer;font-family:inherit;white-space:nowrap;
+}
+@media(min-width:961px){ .stickybar{display:none;} }
+
+/* ============================================================
+   토스트
+   ============================================================ */
+#toast{
+  position:fixed;left:50%;transform:translateX(-50%);bottom:calc(96px + env(safe-area-inset-bottom));z-index:100;
+  background:var(--ink);color:#fff;font-size:13.5px;font-weight:600;
+  padding:12px 20px;border-radius:12px;box-shadow:0 6px 24px rgba(0,0,0,.25);
+  opacity:0;pointer-events:none;transition:opacity .25s,transform .25s;max-width:86vw;text-align:center;
+}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(-6px);}
+#toast.warn{background:#a33b3b;}
+@media(min-width:961px){ #toast{bottom:40px;} }
+
+footer.note{text-align:center;color:var(--steel);font-size:12px;margin-top:26px;line-height:1.7;}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="top">
+    <div class="eyebrow">GOOD TOUR · 울릉도 견적 계산기 v3</div>
+    <h1>클릭 몇 번으로 끝나는<br>울릉도 견적서</h1>
+    <p>일자·인원·선박·투어·숙박만 고르면 금액과 견적서가 자동 완성됩니다. 문구는 카카오톡·문자로 바로 복사, 이미지는 PNG로 저장하세요. 입력 내용은 자동 저장됩니다.</p>
+    <svg class="waves" viewBox="0 0 1200 60" preserveAspectRatio="none" height="46" xmlns="http://www.w3.org/2000/svg"><path d="M0,30 C150,55 300,5 450,30 C600,55 750,5 900,30 C1050,55 1150,15 1200,25 L1200,60 L0,60 Z" fill="rgba(0,232,143,.10)"/><path d="M0,42 C180,20 380,58 560,38 C740,18 920,56 1200,36 L1200,60 L0,60 Z" fill="rgba(0,232,143,.07)"/></svg>
+  </header>
+
+  <div class="grid">
+    <!-- ================= LEFT : 입력 ================= -->
+    <div>
+      <div class="card">
+        <h2><span class="num">1</span>고객 정보</h2>
+        <div class="field-row">
+          <div class="field" id="f_custName">
+            <label for="custName">고객명</label>
+            <input id="custName" placeholder="예: 나현호" autocomplete="off">
+            <span class="err-msg">고객명을 입력해주세요</span>
+          </div>
+          <div class="field">
+            <label for="staffName">담당자</label>
+            <select id="staffName">
+              <option value="서민구 팀장">서민구 팀장</option>
+              <option value="이재훈 팀장">이재훈 팀장</option>
+            </select>
+          </div>
+        </div>
+        <div class="field-row">
+          <div class="field">
+            <label for="staffTel">담당자 연락처</label>
+            <input id="staffTel" value="010-3361-4142" readonly>
+          </div>
+          <div class="field">
+            <label for="teamCount">인원(총 팀 인원) <span class="badge-auto">자동 합산</span></label>
+            <input id="teamCount" type="number" min="0" value="1" readonly>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2><span class="num">2</span>일자 · 선박 · 스케줄</h2>
+        <div class="field-row">
+          <div class="field">
+            <label for="shipSel">선박(출항지)</label>
+            <select id="shipSel">
+              <option value="crz">포항크루즈 · 울릉크루즈</option>
+              <option value="poh">포항쾌속 · 대저해운</option>
+              <option value="muk">묵호 · 씨스포빌</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="daySel">일정</label>
+            <select id="daySel">
+              <option value="1">1박 2일</option>
+              <option value="2">2박 3일</option>
+            </select>
+          </div>
+        </div>
+        <div class="field-row">
+          <div class="field" id="f_startDate">
+            <label for="startDate">출발일 (포항/묵호 출항일)</label>
+            <input id="startDate" type="date">
+            <span class="err-msg">출발일을 선택해주세요</span>
+          </div>
+          <div class="field">
+            <label for="endDate">도착일 (자동 계산)</label>
+            <input id="endDate" type="text" readonly placeholder="-">
+          </div>
+        </div>
+        <div class="field" style="margin-bottom:14px;">
+          <label>요금 시즌 <span class="badge-auto" id="seasonBadge" style="display:none;">자동 추천</span></label>
+          <div class="pill-group" id="seasonPills" role="radiogroup" aria-label="요금 시즌">
+            <button type="button" class="pill" data-v="0">주중</button>
+            <button type="button" class="pill" data-v="1">주말</button>
+            <button type="button" class="pill" data-v="2">성수기</button>
+          </div>
+          <div class="hint" id="seasonHint">출발일을 선택하면 요일·성수기 기간(7/15~8/20) 기준으로 자동 추천됩니다. 직접 눌러 바꿀 수도 있어요.</div>
+        </div>
+        <div class="ship-links">
+          <a class="ship-card" target="_blank" rel="noopener" id="link_crz" href="https://www.ulcruise.co.kr/www/flight/timetable?sub_mode=today">
+            <div class="sname">울릉크루즈 · 운항시간표</div>
+            <div class="sdesc">포항크루즈 · 뉴씨다오펄호<br>가까운 날짜(1~2주 이내)만 실제 운항정보 표시</div>
+            <div class="go">선택한 출발일로 바로가기 →</div>
+          </a>
+          <a class="ship-card" target="_blank" rel="noopener" id="link_poh" href="https://www.daezer.com/departure/departure-schedule.html">
+            <div class="sname">대저해운 · 운항시간표</div>
+            <div class="sdesc">포항쾌속 · 엘도라도 익스프레스호<br>월별 캘린더에서 결항/시간 확인</div>
+            <div class="go">선택한 출발월로 바로가기 →</div>
+          </a>
+          <a class="ship-card" target="_blank" rel="noopener" id="link_muk" href="https://www.seaspovill.co.kr/board/bbs/board.php?bo_table=schedule">
+            <div class="sname">씨스포빌 · 운항일정</div>
+            <div class="sdesc">묵호/강릉 출항<br>자동 조회 불가 — 게시판에서 직접 확인</div>
+            <div class="go">운항일정 게시판 바로가기 →</div>
+          </a>
+        </div>
+        <div class="notice" id="scheduleNotice">출발일을 입력하면 위 링크가 해당 날짜(또는 해당 월)로 자동으로 맞춰집니다. 실시간 예약 현황은 반드시 직접 클릭해 최종 확인해주세요.</div>
+      </div>
+
+      <div class="card">
+        <h2><span class="num">3</span>투어방법 · 숙소</h2>
+        <div class="field-row">
+          <div class="field">
+            <label for="tourSel">투어 방법</label>
+            <select id="tourSel">
+              <option value="md">MD추천 (버스투어)</option>
+              <option value="taxi">택시투어</option>
+              <option value="rent">렌터카 자유일정</option>
+              <option value="rents">렌터카 + 스노클링</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="lodging">숙소</label>
+            <input id="lodging" placeholder="예: OO모텔 3인 1실" autocomplete="off">
+          </div>
+        </div>
+        <div class="checkline">
+          <input type="checkbox" id="dokdoChk">
+          <label for="dokdoChk">독도 코스 포함</label>
+        </div>
+      </div>
+
+      <div class="card" id="paxCard">
+        <h2><span class="num">4</span>인원 구성</h2>
+        <div class="tier-row">
+          <div><div class="tier-name">대인 (일반)</div><div class="tier-sub">할인 없음</div></div>
+          <div class="stepper"><button type="button" data-t="cnt_adult" data-d="-1" aria-label="감소">−</button><input type="number" min="0" value="1" id="cnt_adult"><button type="button" data-t="cnt_adult" data-d="1" aria-label="증가">+</button></div>
+        </div>
+        <div class="tier-row">
+          <div><div class="tier-name">소인 / 장애중증</div><div class="tier-sub">50% 할인</div></div>
+          <div class="stepper"><button type="button" data-t="cnt_d50" data-d="-1" aria-label="감소">−</button><input type="number" min="0" value="0" id="cnt_d50"><button type="button" data-t="cnt_d50" data-d="1" aria-label="증가">+</button></div>
+        </div>
+        <div class="tier-row">
+          <div><div class="tier-name">경로 / 장애경증 / 단체중고 / 도민</div><div class="tier-sub">20% 할인</div></div>
+          <div class="stepper"><button type="button" data-t="cnt_d20" data-d="-1" aria-label="감소">−</button><input type="number" min="0" value="0" id="cnt_d20"><button type="button" data-t="cnt_d20" data-d="1" aria-label="증가">+</button></div>
+        </div>
+        <div class="tier-row">
+          <div><div class="tier-name">일반단체 / 중고생</div><div class="tier-sub">10% 할인</div></div>
+          <div class="stepper"><button type="button" data-t="cnt_d10" data-d="-1" aria-label="감소">−</button><input type="number" min="0" value="0" id="cnt_d10"><button type="button" data-t="cnt_d10" data-d="1" aria-label="증가">+</button></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ================= RIGHT : 결과 ================= -->
+    <div class="col-result">
+      <div class="ticket">
+        <div class="stub-hole left"></div>
+        <div class="stub-hole right"></div>
+        <div class="route">
+          <div class="city" id="ticketShip">포항크루즈</div>
+          <div class="arrow">⇄</div>
+          <div class="city">울릉도</div>
+        </div>
+        <div class="meta-grid">
+          <div><span class="k">일정</span><span class="v" id="ticketDays">1박 2일</span></div>
+          <div><span class="k">출발일</span><span class="v" id="ticketDate">-</span></div>
+          <div><span class="k">인원</span><span class="v" id="ticketPax">1명</span></div>
+          <div><span class="k">시즌</span><span class="v" id="ticketSeason">주중</span></div>
+        </div>
+        <div class="total-box">
+          <div class="label">청구 총액</div>
+          <div class="amount" id="totalAmount">0원</div>
+          <div class="amount-kr" id="totalAmountKr"></div>
+          <div class="deposit" id="depositLine">계약금 <b>100,000원</b> (1인 × 100,000원)</div>
+        </div>
+        <div class="breakdown" id="breakdown"></div>
+        <div class="btnbar">
+          <button class="btn primary" id="genBtn">견적서 문구 생성</button>
+          <button class="btn ghost" id="resetBtn">입력 초기화</button>
+        </div>
+      </div>
+
+      <div class="card" style="margin-top:14px;">
+        <div class="copybar" style="margin-bottom:4px;">
+          <h2 style="font-size:15px;margin:0;font-weight:700;color:var(--ink);text-transform:none;letter-spacing:0;">최근 견적 이력</h2>
+          <button class="btn light" id="histClearBtn" style="flex:0;min-width:auto;padding:7px 14px;font-size:12px;">전체 삭제</button>
+        </div>
+        <div id="histList"><div class="hist-empty">아직 생성한 견적이 없습니다. 견적서를 생성하면 자동으로 여기에 쌓입니다.</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 견적 문구 -->
+  <div class="quote-out">
+    <div class="copybar">
+      <h2>완성된 견적서 문구</h2>
+      <span class="msg" id="copyMsg">복사되었습니다</span>
+    </div>
+    <textarea id="quoteText" placeholder="위 정보를 입력하고 '견적서 문구 생성' 버튼을 누르면 여기에 완성된 문구가 나타납니다."></textarea>
+    <div class="btnbar">
+      <button class="btn primary" id="copyBtn">문구 복사하기</button>
+    </div>
+  </div>
+
+  <!-- 견적서 이미지 -->
+  <div class="quote-out">
+    <div class="copybar">
+      <h2>견적서 이미지 미리보기</h2>
+      <span class="msg" id="imgMsg">이미지가 저장되었습니다</span>
+    </div>
+    <div class="doc-wrap">
+      <div id="docSheet">
+        <div class="doc-hero">
+          <svg class="island" viewBox="0 0 820 70" height="70" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M0,50 L240,50 C280,50 300,22 340,18 C370,15 385,8 410,8 C435,8 450,15 480,18 C520,22 540,50 580,50 L820,50 L820,70 L0,70 Z" fill="rgba(4,38,59,.55)"/>
+            <path d="M0,56 C140,44 300,66 460,54 C620,42 730,62 820,52 L820,70 L0,70 Z" fill="rgba(0,232,143,.20)"/>
+            <path d="M0,62 C180,52 360,70 540,60 C680,53 760,66 820,60 L820,70 L0,70 Z" fill="rgba(255,255,255,.10)"/>
+          </svg>
+          <div class="doc-hero-title"><small>GOOD TOUR · ULLEUNGDO</small>현지 여행사 굿투어 · 울릉도여행 일정 및 견적서</div>
+        </div>
+        <table class="doc-info-table">
+          <tr><td class="lbl">수신</td><td id="d_cust">-</td><td class="lbl">담당</td><td id="d_staff">-</td><td class="lbl">연락처</td><td id="d_tel">-</td></tr>
+        </table>
+        <div class="doc-block" id="d_summary">위에서 정보를 입력하고 '견적서 문구 생성'을 누르면 이미지가 완성됩니다.</div>
+        <table class="itin" id="d_itin"></table>
+        <div class="doc-footer">
+          <div>굿투어주식회사 · 사업자 506-81-87523 · 계좌 농협 351-0693-3158-03</div>
+          <div class="doc-footer-warn">상기 일정은 현지 상황 및 기상에 따라 변경될 수 있습니다.</div>
+        </div>
+      </div>
+    </div>
+    <div class="btnbar">
+      <button class="btn primary" id="imgBtn">PNG 이미지로 저장</button>
+    </div>
+  </div>
+
+  <footer class="note">
+    가격은 내부 견적 계산기 기준 표준가이며, 실제 청구금액은 협의에 따라 조정될 수 있습니다.<br>
+    굿투어주식회사 · 사업자 506-81-87523 · 계좌 농협 351-0693-3158-03
+  </footer>
+</div>
+
+<!-- 모바일 하단 고정 총액바 -->
+<div class="stickybar" id="stickybar">
+  <div>
+    <div class="s-label">청구 총액</div>
+    <div class="s-amt" id="stickyAmt">0원</div>
+  </div>
+  <button class="s-btn" id="stickyGenBtn">견적서 생성</button>
+</div>
+
+<div id="toast" role="status"></div>
+
+<script>
+/* ============================================================
+   가격 원장 — 원본 굿투어_견적계산기_2.html과 동일 (수정 금지)
+   PRICES[ship][nights][tier][tour] = [주중,주말,성수기,독도주중,독도주말,독도성수기]
+   ============================================================ */
+const PRICES = {
+crz:{1:{adult:{md:[361000,412000,442000,421000,472000,502000],taxi:[448000,499000,513000,508000,559000,573000],rent:[320900,371900,385900,380900,431900,445900],rents:[340900,391900,405900,400900,451900,465900]},
+        d50:{md:[281000,324000,362000,311000,354000,384000],taxi:[368000,411000,433000,398000,441000,455000],rent:[240900,283900,305900,270900,313900,327900],rents:[260900,303900,325900,290900,333900,347900]},
+        d20:{md:[329000,376800,410000,377000,424800,454800],taxi:[416000,463800,481000,464000,511800,525800],rent:[288900,336700,353900,336900,384700,398700],rents:[308900,356700,373900,356900,404700,418700]},
+        d10:{md:[345000,394400,426000,399000,448400,478400],taxi:[432000,481400,497000,486000,535400,549400],rent:[304900,354300,369900,358900,408300,422300],rents:[324900,374300,389900,378900,428300,442300]}},
+     2:{adult:{md:[431000,487000,517000,491000,547000,577000],taxi:[518000,574000,604000,578000,634000,664000],rent:[413900,469900,499900,473900,529900,559900],rents:[433900,489900,519900,493900,549900,579900]},
+        d50:{md:[351000,399000,429000,381000,429000,459000],taxi:[438000,486000,516000,468000,516000,546000],rent:[333900,381900,411900,363900,411900,441900],rents:[353900,401900,431900,383900,431900,461900]},
+        d20:{md:[399000,451800,481800,447000,499800,529800],taxi:[486000,538800,568800,534000,586800,616800],rent:[381900,434700,464700,429900,482700,512700],rents:[401900,454700,484700,449900,502700,532700]},
+        d10:{md:[415000,469400,499400,469000,523400,553400],taxi:[502000,556400,586400,556000,610400,640400],rent:[397900,452300,482300,451900,506300,536300],rents:[417900,472300,502300,471900,526300,556300]}}},
+poh:{1:{adult:{md:[364000,399000,444900,406000,441000,486900],taxi:[451000,486000,531900,476000,511000,556900],rent:[320900,355900,401800,380900,415900,461800],rents:[340900,375900,421800,400900,435900,481800]},
+        d50:{md:[284500,319500,365400,296500,331500,377400],taxi:[371500,406500,452400,366500,401500,447400],rent:[241400,276400,322300,271400,306400,352300],rents:[261400,296400,342300,291400,326400,372300]},
+        d20:{md:[332200,367200,413100,362200,397200,443100],taxi:[419200,454200,500100,432200,467200,513100],rent:[289100,324100,370000,337100,372100,418000],rents:[309100,344100,390000,357100,392100,438000]},
+        d10:{md:[348100,383100,429000,384100,419100,465000],taxi:[435100,470100,516000,454100,489100,535000],rent:[305000,340000,385900,359000,394000,439900],rents:[325000,360000,405900,379000,414000,459900]}},
+     2:{adult:{md:[411000,451000,496900,471000,511000,556900],taxi:[498000,538000,583900,558000,598000,643900],rent:[403900,459800,489800,463900,519800,549800],rents:[423900,479800,509800,483900,539800,569800]},
+        d50:{md:[331500,371500,417400,361500,401500,447400],taxi:[418500,458500,504400,448500,488500,534400],rent:[324400,380300,410300,354400,410300,440300],rents:[344400,400300,430300,374400,430300,460300]},
+        d20:{md:[379200,419200,465100,427200,467200,513100],taxi:[466200,506200,552100,514200,554200,600100],rent:[372100,428000,458000,420100,476000,506000],rents:[392100,448000,478000,440100,496000,526000]},
+        d10:{md:[395100,435100,481000,449100,489100,535000],taxi:[482100,522100,568000,536100,576100,622000],rent:[388000,443900,473900,442000,497900,527900],rents:[408000,463900,493900,462000,517900,547900]}}},
+muk:{1:{adult:{md:[317000,352000,394800,359000,394000,436800],taxi:[404000,439000,481800,429000,464000,506800],rent:[278900,313900,356700,338900,373900,416700],rents:[298900,333900,376700,358900,393900,436700]},
+        d50:{md:[253000,288000,330800,265000,300000,342800],taxi:[340000,375000,417800,335000,370000,412800],rent:[214900,249900,292700,244900,279900,322700],rents:[234900,269900,312700,264900,299900,342700]},
+        d20:{md:[291400,326400,369200,321400,356400,399200],taxi:[378400,413400,456200,391400,426400,469200],rent:[253300,288300,331100,301300,336300,379100],rents:[273300,308300,351100,321300,356300,399100]},
+        d10:{md:[304200,339200,382000,340200,375200,418000],taxi:[391200,426200,469000,410200,445200,488000],rent:[266100,301100,343900,320100,355100,397900],rents:[286100,321100,363900,340100,375100,417900]}},
+     2:{adult:{md:[369000,409000,451800,429000,469000,511800],taxi:[456000,496000,538800,516000,556000,598800],rent:[361900,401900,444700,421900,461900,504700],rents:[381900,421900,464700,441900,481900,524700]},
+        d50:{md:[305000,345000,387800,335000,375000,417800],taxi:[392000,432000,474800,422000,462000,504800],rent:[297900,337900,380700,327900,367900,410700],rents:[317900,357900,400700,347900,387900,430700]},
+        d20:{md:[343400,383400,426200,391400,431400,474200],taxi:[430400,470400,513200,478400,518400,561200],rent:[336300,376300,419100,384300,424300,467100],rents:[356300,396300,439100,404300,444300,487100]},
+        d10:{md:[356200,396200,439000,410200,450200,493000],taxi:[443200,483200,526000,497200,537200,580000],rent:[349100,389100,431900,403100,443100,485900],rents:[369100,409100,451900,423100,463100,505900]}}}
+};
+const SHIP_LABEL = {crz:'포항크루즈 (울릉크루즈)', poh:'포항쾌속 (대저해운)', muk:'묵호 (씨스포빌)'};
+const TOUR_LABEL = {md:'MD추천 버스투어', taxi:'택시투어', rent:'렌터카 자유일정', rents:'렌터카+스노클링'};
+const TIER_LABEL = {adult:'대인(일반)', d50:'소인/장애중증(50%)', d20:'경로/장애경증/단체중고/도민(20%)', d10:'일반단체/중고생(10%)'};
+const SEASON_LABEL = ['주중','주말','성수기'];
+const STAFF_TEL = {'서민구 팀장':'010-3361-4142','이재훈 팀장':'010-3361-4142'};
+const DEPOSIT_PER_PERSON = 100000;
+/* 성수기 자동 추천 기간 (월-일). 선사 공지에 따라 여기만 수정하면 됨 */
+const PEAK_RANGES = [ {from:'07-15', to:'08-20'} ];
+
+const DRAFT_KEY = 'gt_quote_draft_v3';
+const HIST_KEY  = 'gt_quote_hist_v3';
+
+let season = 0;          // 0 주중 / 1 주말 / 2 성수기
+let seasonIsAuto = true; // 자동 추천 상태인지
+
+/* ============================================================
+   유틸
+   ============================================================ */
+const $ = id => document.getElementById(id);
+const WEEKDAY = ['일','월','화','수','목','금','토'];
+
+function fmt(n){ return n.toLocaleString('ko-KR') + '원'; }
+function fmtDate(dateStr){
+  if(!dateStr) return '-';
+  const d = new Date(dateStr+'T00:00:00');
+  if(isNaN(d)) return dateStr;
+  return `${dateStr}(${WEEKDAY[d.getDay()]})`;
+}
+function addDays(dateStr, days){
+  const d = new Date(dateStr+'T00:00:00');
+  d.setDate(d.getDate()+days);
+  const y=d.getFullYear(), m=String(d.getMonth()+1).padStart(2,'0'), dd=String(d.getDate()).padStart(2,'0');
+  return `${y}-${m}-${dd}`;
+}
+function numToKorean(num){
+  if(num===0) return '영원';
+  const digits=['','일','이','삼','사','오','육','칠','팔','구'];
+  const units=['','십','백','천'];
+  const bigUnits=['','만','억','조'];
+  let str=String(num), chunks=[];
+  while(str.length>0){ chunks.unshift(str.slice(-4)); str=str.slice(0,-4); }
+  let words=[];
+  for(let i=0;i<chunks.length;i++){
+    let chunk=parseInt(chunks[i],10);
+    if(chunk===0) continue;
+    let cd=String(chunk).split('').map(Number);
+    let len=cd.length, cs='';
+    for(let j=0;j<len;j++){
+      let d=cd[j], place=len-j-1;
+      if(d===0) continue;
+      cs += (d===1 && place>0) ? units[place] : digits[d]+units[place];
+    }
+    words.push(cs+bigUnits[chunks.length-1-i]);
+  }
+  return words.join('')+'원';
+}
+function toast(msg, warn){
+  const t = $('toast');
+  t.textContent = msg;
+  t.className = warn ? 'warn show' : 'show';
+  clearTimeout(t._timer);
+  t._timer = setTimeout(()=>{ t.className=''; }, 2400);
+}
+async function copyToClipboard(text){
+  try{
+    await navigator.clipboard.writeText(text);
+    return true;
+  }catch(e){
+    /* fallback: 구형/비보안 컨텍스트 */
+    try{
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      ta.style.position='fixed'; ta.style.opacity='0';
+      document.body.appendChild(ta);
+      ta.focus(); ta.select();
+      const ok = document.execCommand('copy');
+      document.body.removeChild(ta);
+      return ok;
+    }catch(e2){ return false; }
+  }
+}
+
+/* ============================================================
+   시즌 자동 추천: 성수기 기간 우선, 그 외 금·토=주말
+   ============================================================ */
+function isPeak(dateStr){
+  const md = dateStr.slice(5); // 'MM-DD'
+  return PEAK_RANGES.some(r => md >= r.from && md <= r.to);
+}
+function autoSeasonFromDate(dateStr){
+  if(!dateStr) return 0;
+  if(isPeak(dateStr)) return 2;
+  const d = new Date(dateStr+'T00:00:00');
+  const dow = d.getDay();
+  return (dow===5 || dow===6) ? 1 : 0; // 금·토 → 주말
+}
+function updateSeasonPills(){
+  document.querySelectorAll('#seasonPills .pill').forEach(p=>{
+    p.classList.toggle('active', parseInt(p.dataset.v,10)===season);
+  });
+  $('seasonBadge').style.display = seasonIsAuto && $('startDate').value ? 'inline-block' : 'none';
+}
+
+/* ============================================================
+   견적 계산
+   ============================================================ */
+function getCounts(){
+  return {
+    adult: Math.max(0, parseInt($('cnt_adult').value,10)||0),
+    d50:   Math.max(0, parseInt($('cnt_d50').value,10)||0),
+    d20:   Math.max(0, parseInt($('cnt_d20').value,10)||0),
+    d10:   Math.max(0, parseInt($('cnt_d10').value,10)||0),
+  };
+}
+function computeQuote(){
+  const ship = $('shipSel').value;
+  const nights = parseInt($('daySel').value,10);
+  const tour = $('tourSel').value;
+  const dokdo = $('dokdoChk').checked;
+  const counts = getCounts();
+  const table = PRICES[ship][nights];
+  const col = season + (dokdo ? 3 : 0);
+  let total = 0;
+  const lines = [];
+  for(const tier of Object.keys(counts)){
+    const c = counts[tier];
+    if(c<=0) continue;
+    const unit = table[tier][tour][col];
+    total += unit*c;
+    lines.push({tier, c, unit, sub: unit*c});
+  }
+  const totalPax = counts.adult+counts.d50+counts.d20+counts.d10;
+  return {ship, nights, tour, dokdo, season, counts, totalPax, total, lines};
+}
+
+/* ============================================================
+   렌더
+   ============================================================ */
+function updateScheduleLinks(){
+  const start = $('startDate').value;
+  if(start){
+    const [y,m] = start.split('-');
+    $('link_crz').href = `https://www.ulcruise.co.kr/www/flight/timetable?date=${start}&sub_mode=today`;
+    $('link_poh').href = `https://www.daezer.com/departure/departure-schedule.html?year=${y}&month=${m}`;
+    $('scheduleNotice').textContent =
+      `${fmtDate(start)} 기준으로 링크가 맞춰져 있습니다. 클릭해서 실제 운항/결항 여부를 최종 확인해주세요. (씨스포빌은 게시판에서 직접 확인)`;
+  } else {
+    $('link_crz').href = 'https://www.ulcruise.co.kr/www/flight/timetable?sub_mode=today';
+    $('link_poh').href = 'https://www.daezer.com/departure/departure-schedule.html';
+    $('scheduleNotice').textContent =
+      '출발일을 입력하면 위 링크가 해당 날짜(또는 해당 월)로 자동으로 맞춰집니다. 실시간 예약 현황은 반드시 직접 클릭해 최종 확인해주세요.';
+  }
+}
+function dDayText(dateStr){
+  if(!dateStr) return '';
+  const today = new Date(); today.setHours(0,0,0,0);
+  const target = new Date(dateStr+'T00:00:00');
+  const diff = Math.round((target - today) / 86400000);
+  if(diff === 0) return 'D-DAY';
+  if(diff > 0) return `D-${diff}`;
+  return '';
+}
+function render(){
+  const q = computeQuote();
+  $('ticketShip').textContent = SHIP_LABEL[q.ship].split(' (')[0];
+  $('ticketDays').textContent = q.nights===1 ? '1박 2일' : '2박 3일';
+
+  const start = $('startDate').value;
+  const dday = dDayText(start);
+  $('ticketDate').innerHTML = start ? `${fmtDate(start)}${dday?`<span class="dday">${dday}</span>`:''}` : '-';
+  $('ticketPax').textContent = q.totalPax+'명';
+  $('ticketSeason').textContent = SEASON_LABEL[q.season] + (q.dokdo? ' · 독도포함':'');
+  $('totalAmount').textContent = fmt(q.total);
+  $('totalAmountKr').textContent = q.total>0 ? numToKorean(q.total)+'정' : '';
+  $('stickyAmt').textContent = fmt(q.total);
+  $('teamCount').value = q.totalPax;
+  $('depositLine').innerHTML = `계약금 <b>${fmt(q.totalPax*DEPOSIT_PER_PERSON)}</b> (${q.totalPax}인 × ${fmt(DEPOSIT_PER_PERSON)})`;
+
+  const bd = $('breakdown');
+  bd.innerHTML = '';
+  q.lines.forEach(l=>{
+    const row = document.createElement('div');
+    row.innerHTML = `<span>${TIER_LABEL[l.tier]} × ${l.c}명</span><span>${fmt(l.sub)}</span>`;
+    bd.appendChild(row);
+  });
+  if(q.lines.length===0){
+    bd.innerHTML = '<div class="empty"><span>인원을 입력해주세요</span><span>-</span></div>';
+  }
+  updateScheduleLinks();
+  saveDraft();
+}
+
+/* ============================================================
+   일정표 생성
+   ============================================================ */
+function buildItineraryRows(nights, tour, dokdo){
+  const tourWord = (tour==='md') ? '버스투어' : (tour==='taxi') ? '택시투어' : (tour==='rents') ? '렌터카' : '렌터카 자유일정';
+  const rows = [];
+  rows.push(['1일차','오전','승선권 수령 및 승선','']);
+  rows.push(['1일차','','출항 → 울릉도','']);
+  rows.push(['1일차','','중식','']);
+  rows.push(['1일차','오후','◆ 울릉도 한바퀴 '+tourWord+' A','']);
+  rows.push(['1일차','','도동/저동 → 통구미 → 태하 → 현포 → 성불사 → 나리분지 → 삼선암 → 관음도 앞 → 도동/저동','']);
+  rows.push(['1일차','','숙소 체크인 및 자유일정','']);
+  rows.push(['1일차','','석식','']);
+  rows.push(['2일차','오전','조식','']);
+  if(dokdo){
+    rows.push(['2일차','','◆ 우리땅 독도 탐방','기상에 따라 변경']);
+  } else if(nights===2){
+    rows.push(['2일차','','◆ 선택관광 or 자유일정','']);
+  }
+  if(tour==='rents'){
+    rows.push(['2일차','','◆ 울릉도 바다 스노클링 체험','기상에 따라 변경']);
+  }
+  rows.push(['2일차','','중식','']);
+  rows.push(['2일차','오후','◆ 울릉도 트래킹 '+tourWord+' B','']);
+  rows.push(['2일차','','도동/저동 → 관음도 → 봉래폭포 → 촛대바위','']);
+  if(nights===1){
+    rows.push(['2일차','','행남등대 해안산책로 · 여객선터미널 이동','']);
+    rows.push(['2일차','','울릉도 출항 → 하선 및 일정종료','']);
+  } else {
+    rows.push(['2일차','','이후 자유일정 · 석식','']);
+    rows.push(['3일차','오전','기상 체크아웃','']);
+    rows.push(['3일차','','조식','']);
+    rows.push(['3일차','','◆ 자유일정(도동항 탐방 · 독도박물관/케이블카)','']);
+    rows.push(['3일차','','중식','']);
+    rows.push(['3일차','오후','◆ 행남등대 해안산책로','']);
+    rows.push(['3일차','','여객선터미널 이동 및 승선','']);
+    rows.push(['3일차','','울릉도 출항 → 하선 및 일정종료','']);
+  }
+  return rows;
+}
+function rowsToTabText(rows){
+  let out = '일 자\t시 간\t내 용\t\t비 고\n';
+  rows.forEach(r=> out += `${r[0]}\t${r[1]}\t${r[2]}\t\t${r[3]}\n`);
+  return out.trim();
+}
+function rowsToHtmlTable(rows){
+  let html = '<tr><th style="width:56px;">일자</th><th style="width:44px;">시간</th><th>내용</th><th style="width:80px;">비고</th></tr>';
+  let i = 0;
+  while(i < rows.length){
+    const day = rows[i][0];
+    let span = 0, j = i;
+    while(j < rows.length && rows[j][0] === day){ span++; j++; }
+    for(let k=i;k<j;k++){
+      html += '<tr>';
+      if(k===i) html += `<td class="day" rowspan="${span}">${day}</td>`;
+      html += `<td class="time">${rows[k][1]}</td><td>${rows[k][2]}</td><td class="note">${rows[k][3]}</td>`;
+      html += '</tr>';
+    }
+    i = j;
+  }
+  return html;
+}
+
+/* ============================================================
+   검증 + 견적서 생성
+   ============================================================ */
+function validate(){
+  let ok = true;
+  const startF = $('f_startDate');
+  startF.classList.remove('error');
+  if(!$('startDate').value){ startF.classList.add('error'); ok = false; }
+
+  const q = computeQuote();
+  if(q.totalPax < 1){
+    ok = false;
+    toast('인원을 1명 이상 입력해주세요', true);
+    $('paxCard').scrollIntoView({behavior:'smooth', block:'center'});
+    return false;
+  }
+  if(!ok){
+    toast('출발일을 선택해주세요', true);
+    startF.scrollIntoView({behavior:'smooth', block:'center'});
+  }
+  return ok;
+}
+
+function generateQuote(fromSticky){
+  if(!validate()) return null;
+
+  const q = computeQuote();
+  const custName = $('custName').value.trim() || '고객';
+  const staffName = $('staffName').value;
+  const staffTel = STAFF_TEL[staffName] || $('staffTel').value;
+  const startDate = $('startDate').value;
+  const endDate = addDays(startDate, q.nights); /* 도착일 = 출발일 + 박수 */
+  const lodging = $('lodging').value.trim() || '(숙소 미정)';
+  const deposit = q.totalPax*DEPOSIT_PER_PERSON;
+
+  let paxLine = [];
+  if(q.counts.adult) paxLine.push(`대인 ${q.counts.adult}인 (인당 ${fmt(q.lines.find(l=>l.tier==='adult')?.unit||0)})`);
+  if(q.counts.d50) paxLine.push(`소인/장애중증 ${q.counts.d50}인 (인당 ${fmt(q.lines.find(l=>l.tier==='d50')?.unit||0)})`);
+  if(q.counts.d20) paxLine.push(`경로 등 ${q.counts.d20}인 (인당 ${fmt(q.lines.find(l=>l.tier==='d20')?.unit||0)})`);
+  if(q.counts.d10) paxLine.push(`단체/중고생 ${q.counts.d10}인 (인당 ${fmt(q.lines.find(l=>l.tier==='d10')?.unit||0)})`);
+
+  const rows = buildItineraryRows(q.nights, q.tour, q.dokdo);
+  const seasonWord = SEASON_LABEL[q.season];
+
+  const text =
+`현지 여행사 굿투어  ${SHIP_LABEL[q.ship]}   울릉도여행 일정 및 견적서
+수신 ${custName}님   담당 ${staffName}   연락처 ${staffTel}
+발신 굿투어
+
+1. 건   명 : ${custName}님 ${q.totalPax}인팀 ${SHIP_LABEL[q.ship]} ${TOUR_LABEL[q.tour]}${q.dokdo?'+독도':''}
+2. 기   간 : ${fmtDate(startDate)} ~ ${fmtDate(endDate)} (${q.nights===1?'1박2일':'2박3일'} · ${seasonWord})
+3. 제   공 : 굿투어주식회사(사업자: 506-81-87523) / 계좌: 농협 351-0693-3158-03
+4. 포   함 : 왕복승선권 + ${lodging} + ${TOUR_LABEL[q.tour]}${q.dokdo?' + 독도 탐방':''}
+5. 청구금 : 총금액 ${fmt(q.total)} ${numToKorean(q.total)}정
+   (${paxLine.join(', ')})
+   * 카드/현금영수증 시 부가세 10% 별도 발생됩니다. 계약금은 1인당 ${fmt(DEPOSIT_PER_PERSON)}, 총 ${fmt(deposit)}입니다.
+
+${rowsToTabText(rows)}
+
+ ◆ 상기 일정은 현지 상황 및 기상에 따라 변경될 수 있습니다.
+ ◆ 정확한 승선 가능일은 선사 홈페이지에서 최종 확인 후 예약을 확정해드립니다.`;
+
+  $('quoteText').value = text;
+
+  /* ---- 이미지용 문서 채우기 ---- */
+  $('d_cust').textContent = custName+'님';
+  $('d_staff').textContent = staffName || '굿투어';
+  $('d_tel').textContent = staffTel || '-';
+  $('d_summary').innerHTML =
+    `<b>1. 건   명</b> : ${custName}님 ${q.totalPax}인팀 ${SHIP_LABEL[q.ship]} ${TOUR_LABEL[q.tour]}${q.dokdo?'+독도':''}\n`+
+    `<b>2. 기   간</b> : ${fmtDate(startDate)} ~ ${fmtDate(endDate)}  (${q.nights===1?'1박2일':'2박3일'} · ${seasonWord})\n`+
+    `<b>3. 제   공</b> : 굿투어주식회사(사업자: 506-81-87523) / 계좌: 농협 351-0693-3158-03\n`+
+    `<b>4. 포   함</b> : 왕복승선권 + ${lodging} + ${TOUR_LABEL[q.tour]}${q.dokdo?' + 독도 탐방':''}\n`+
+    `<b>5. 청구금</b> : 총 ${fmt(q.total)} (${numToKorean(q.total)}정) — ${paxLine.join(', ')}\n`+
+    `     계약금 1인당 ${fmt(DEPOSIT_PER_PERSON)}, 총 ${fmt(deposit)} · 카드/현금영수증 시 부가세 10% 별도`;
+  $('d_itin').innerHTML = rowsToHtmlTable(rows);
+
+  /* ---- 이력 저장 ---- */
+  pushHistory({
+    ts: Date.now(),
+    custName, total: q.total, totalPax: q.totalPax,
+    ship: q.ship, nights: q.nights, startDate,
+    snapshot: collectForm(),
+  });
+
+  toast('견적서가 생성되었습니다');
+  if(fromSticky) $('quoteText').scrollIntoView({behavior:'smooth', block:'start'});
+  return q;
+}
+
+/* ============================================================
+   자동 저장 / 복원
+   ============================================================ */
+function collectForm(){
+  return {
+    custName: $('custName').value,
+    staffName: $('staffName').value,
+    shipSel: $('shipSel').value,
+    daySel: $('daySel').value,
+    startDate: $('startDate').value,
+    tourSel: $('tourSel').value,
+    lodging: $('lodging').value,
+    dokdo: $('dokdoChk').checked,
+    cnt_adult: $('cnt_adult').value,
+    cnt_d50: $('cnt_d50').value,
+    cnt_d20: $('cnt_d20').value,
+    cnt_d10: $('cnt_d10').value,
+    season, seasonIsAuto,
+  };
+}
+function applyForm(f){
+  if(!f) return;
+  $('custName').value = f.custName||'';
+  $('staffName').value = f.staffName||'서민구 팀장';
+  $('shipSel').value = f.shipSel||'crz';
+  $('daySel').value = f.daySel||'1';
+  $('startDate').value = f.startDate||'';
+  $('tourSel').value = f.tourSel||'md';
+  $('lodging').value = f.lodging||'';
+  $('dokdoChk').checked = !!f.dokdo;
+  $('cnt_adult').value = f.cnt_adult??1;
+  $('cnt_d50').value = f.cnt_d50??0;
+  $('cnt_d20').value = f.cnt_d20??0;
+  $('cnt_d10').value = f.cnt_d10??0;
+  season = f.season??0;
+  seasonIsAuto = f.seasonIsAuto??true;
+  $('staffTel').value = STAFF_TEL[$('staffName').value] || '010-3361-4142';
+  syncEndDate();
+  updateSeasonPills();
+}
+let _saveTimer = null;
+function saveDraft(){
+  clearTimeout(_saveTimer);
+  _saveTimer = setTimeout(()=>{
+    try{ localStorage.setItem(DRAFT_KEY, JSON.stringify(collectForm())); }catch(e){}
+  }, 300);
+}
+function loadDraft(){
+  try{
+    const raw = localStorage.getItem(DRAFT_KEY);
+    if(raw) applyForm(JSON.parse(raw));
+  }catch(e){}
+}
+
+/* ============================================================
+   견적 이력 (최근 8건)
+   ============================================================ */
+function getHistory(){
+  try{ return JSON.parse(localStorage.getItem(HIST_KEY)||'[]'); }catch(e){ return []; }
+}
+function pushHistory(entry){
+  let h = getHistory();
+  h.unshift(entry);
+  h = h.slice(0,8);
+  try{ localStorage.setItem(HIST_KEY, JSON.stringify(h)); }catch(e){}
+  renderHistory();
+}
+function renderHistory(){
+  const h = getHistory();
+  const list = $('histList');
+  if(h.length===0){
+    list.innerHTML = '<div class="hist-empty">아직 생성한 견적이 없습니다. 견적서를 생성하면 자동으로 여기에 쌓입니다.</div>';
+    return;
+  }
+  list.innerHTML = '';
+  h.forEach((e,idx)=>{
+    const d = new Date(e.ts);
+    const when = `${d.getMonth()+1}/${d.getDate()} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+    const item = document.createElement('div');
+    item.className = 'hist-item';
+    item.innerHTML =
+      `<div style="flex:1;min-width:0;">
+         <div class="h-main">${e.custName}님 · ${e.totalPax}명 · ${SHIP_LABEL[e.ship]?.split(' (')[0]||''} ${e.nights===1?'1박2일':'2박3일'}</div>
+         <div class="h-sub">${e.startDate ? fmtDate(e.startDate)+' 출발 · ' : ''}${when} 생성</div>
+       </div>
+       <div class="h-amt">${fmt(e.total)}</div>
+       <button class="h-del" aria-label="삭제" data-i="${idx}">×</button>`;
+    item.addEventListener('click',(ev)=>{
+      if(ev.target.classList.contains('h-del')) return;
+      applyForm(e.snapshot);
+      render();
+      toast(`${e.custName}님 견적을 불러왔습니다`);
+      window.scrollTo({top:0, behavior:'smooth'});
+    });
+    item.querySelector('.h-del').addEventListener('click',(ev)=>{
+      ev.stopPropagation();
+      const h2 = getHistory(); h2.splice(idx,1);
+      try{ localStorage.setItem(HIST_KEY, JSON.stringify(h2)); }catch(e){}
+      renderHistory();
+    });
+    list.appendChild(item);
+  });
+}
+
+/* ============================================================
+   이벤트 바인딩
+   ============================================================ */
+function syncEndDate(){
+  const start = $('startDate').value;
+  const nights = parseInt($('daySel').value,10);
+  $('endDate').value = start ? fmtDate(addDays(start, nights)) : '';
+}
+
+document.querySelectorAll('#seasonPills .pill').forEach(p=>{
+  p.addEventListener('click', ()=>{
+    season = parseInt(p.dataset.v,10);
+    seasonIsAuto = false;
+    updateSeasonPills();
+    render();
+  });
+});
+
+$('startDate').addEventListener('input', (e)=>{
+  syncEndDate();
+  if(e.target.value){
+    season = autoSeasonFromDate(e.target.value);
+    seasonIsAuto = true;
+    updateSeasonPills();
+    $('f_startDate').classList.remove('error');
+  }
+  render();
+});
+$('daySel').addEventListener('change', ()=>{ syncEndDate(); render(); });
+$('staffName').addEventListener('change', ()=>{
+  $('staffTel').value = STAFF_TEL[$('staffName').value] || '010-3361-4142';
+  render();
+});
+
+['shipSel','tourSel','dokdoChk','cnt_adult','cnt_d50','cnt_d20','cnt_d10','lodging','custName'].forEach(id=>{
+  $(id).addEventListener('input', render);
+  $(id).addEventListener('change', render);
+});
+
+/* 스테퍼 버튼 */
+document.querySelectorAll('.stepper button').forEach(b=>{
+  b.addEventListener('click', ()=>{
+    const input = $(b.dataset.t);
+    const v = Math.max(0, (parseInt(input.value,10)||0) + parseInt(b.dataset.d,10));
+    input.value = v;
+    render();
+  });
+});
+
+$('genBtn').addEventListener('click', ()=>generateQuote(false));
+$('stickyGenBtn').addEventListener('click', ()=>generateQuote(true));
+
+$('copyBtn').addEventListener('click', async ()=>{
+  const text = $('quoteText').value;
+  if(!text.trim()){ toast('먼저 견적서 문구를 생성해주세요', true); return; }
+  const ok = await copyToClipboard(text);
+  if(ok){
+    $('copyMsg').classList.add('show');
+    setTimeout(()=>$('copyMsg').classList.remove('show'), 1500);
+    toast('문구가 복사되었습니다. 카톡/문자에 붙여넣으세요');
+  }else{
+    toast('복사에 실패했습니다. 문구를 길게 눌러 직접 복사해주세요', true);
+  }
+});
+
+$('imgBtn').addEventListener('click', async ()=>{
+  if(!$('startDate').value || computeQuote().totalPax<1){
+    if(!validate()) return;
+  }
+  if(typeof html2canvas === 'undefined'){
+    toast('이미지 생성 라이브러리를 불러오지 못했습니다. 인터넷 연결을 확인해주세요', true);
+    return;
+  }
+  if(!$('quoteText').value.trim()){
+    if(!generateQuote(false)) return;
+  } else {
+    generateQuote(false);
+  }
+  const node = $('docSheet');
+  const btn = $('imgBtn');
+  btn.disabled = true; btn.textContent = '이미지 생성 중...';
+  try{
+    const canvas = await html2canvas(node, {scale:2, backgroundColor:'#ffffff', useCORS:true});
+    const link = document.createElement('a');
+    const custName = $('custName').value.trim() || '견적서';
+    const startDate = $('startDate').value || '';
+    link.download = `굿투어_견적서_${custName}_${startDate}.png`;
+    link.href = canvas.toDataURL('image/png');
+    link.click();
+    $('imgMsg').classList.add('show');
+    setTimeout(()=>$('imgMsg').classList.remove('show'), 1800);
+    toast('PNG 이미지가 저장되었습니다');
+  }catch(err){
+    toast('이미지 생성 중 문제가 발생했습니다: '+err.message, true);
+  }
+  btn.disabled = false; btn.textContent = 'PNG 이미지로 저장';
+});
+
+$('resetBtn').addEventListener('click', ()=>{
+  if(!confirm('모든 입력을 초기화할까요? (견적 이력은 유지됩니다)')) return;
+  ['custName','lodging'].forEach(id=>$(id).value='');
+  $('staffName').selectedIndex = 0;
+  $('staffTel').value = '010-3361-4142';
+  $('startDate').value='';
+  $('endDate').value='';
+  $('cnt_adult').value=1;
+  $('cnt_d50').value=0;
+  $('cnt_d20').value=0;
+  $('cnt_d10').value=0;
+  $('dokdoChk').checked=false;
+  season=0; seasonIsAuto=true;
+  updateSeasonPills();
+  $('quoteText').value='';
+  $('d_cust').textContent='-';
+  $('d_staff').textContent='-';
+  $('d_tel').textContent='-';
+  $('d_summary').textContent="위에서 정보를 입력하고 '견적서 문구 생성'을 누르면 이미지가 완성됩니다.";
+  $('d_itin').innerHTML='';
+  try{ localStorage.removeItem(DRAFT_KEY); }catch(e){}
+  render();
+  toast('입력이 초기화되었습니다');
+});
+
+$('histClearBtn').addEventListener('click', ()=>{
+  if(!confirm('견적 이력을 전부 삭제할까요?')) return;
+  try{ localStorage.removeItem(HIST_KEY); }catch(e){}
+  renderHistory();
+});
+
+/* ============================================================
+   초기화
+   ============================================================ */
+loadDraft();
+updateSeasonPills();
+renderHistory();
+render();
+</script>
+</body>
+</html>
