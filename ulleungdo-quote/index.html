@@ -548,7 +548,7 @@ footer.note{text-align:center;color:var(--steel);font-size:12px;margin-top:26px;
             <select id="rentVeh"></select>
           </div>
           <div class="field">
-            <label for="rentPrice">차종 요금 (총액) <span class="badge-auto">수정 가능</span></label>
+            <label for="rentPrice" id="rentPriceLabel">차종 기준가 <span class="badge-auto">수정 가능</span></label>
             <input id="rentPrice" type="text" inputmode="numeric" autocomplete="off">
           </div>
         </div>
@@ -708,8 +708,14 @@ const TOUR_ORDER = ['bus','taxi','starex','combi','bus25','bus35','rent'];
 const TOUR_LABEL = {bus:'버스투어', taxi:'택시투어', starex:'스타렉스투어', combi:'단독콤비투어', bus25:'단독25인승', bus35:'단독35인승', rent:'자유렌트'};
 /* 과금 방식: pp=1인당 일괄, total=팀 총액÷인원 */
 const TOUR_MODE  = {bus:'pp', taxi:'total', starex:'total', combi:'total', bus25:'total', bus35:'total', rent:'total'};
-const RENT_ORDER = ['small','sedan','suv','starex'];
-const RENT_LABEL = {small:'소형', sedan:'승용', suv:'SUV', starex:'스타렉스'};
+/* 자유렌트 차종 — 올릉도렌트카(주) 여행사판매가 2026 (비수기/성수기), 마진 1박당 10,000 별도 */
+const RENT_ORDER = ['ray','avante','kona','tucson','staria','carnival','solati'];
+const RENT_LABEL = {ray:'레이', avante:'아반떼/K3', kona:'코나/셀토스', tucson:'투싼/스포티지', staria:'스타리아/스타렉스', carnival:'카니발', solati:'쏠라티'};
+const RENT_TABLE = {
+  ray:{off:50000,peak:80000}, avante:{off:60000,peak:90000}, kona:{off:70000,peak:100000},
+  tucson:{off:80000,peak:110000}, staria:{off:110000,peak:140000}, carnival:{off:110000,peak:140000}, solati:{off:290000,peak:340000}
+};
+const RENT_MARGIN = 10000; /* 자유렌트 마진 (1박당) */
 const SEASON_LABEL = ['주중','주말','성수기'];
 const STAFF_TEL = {'서민구 팀장':'010-3361-4142','이재훈 팀장':'010-3361-4142'};
 const DEPOSIT_PER_PERSON = 100000;
@@ -732,13 +738,12 @@ const LODGE_TYPES = ['모텔','호텔','리조트','펜션'];
 /* ---- 편집 가능한 기본 요금(고정값이되 화면에서 수정 가능, localStorage에 별도 저장) ---- */
 const DEFAULT_SHIP_FARE  = {crz:190000, poh:175000, muk:160000}; /* 대인 왕복 승선권(1인) */
 const DEFAULT_TOUR_PRICE = {bus:38000, taxi:300000, starex:350000, combi:400000, bus25:500000, bus35:600000, rent:0}; /* bus=1인당, 나머지=팀 총액 */
-const DEFAULT_RENT_PRICE = {small:90000, sedan:110000, suv:150000, starex:200000}; /* 자유렌트 차종별 총액 */
 const DEFAULT_DOKDO_FARE = 55000; /* 독도 1인 추가요금 */
 const DEFAULT_FUEL_FARE  = 0;     /* 유류할증료(1인) — 고정값, 화면에서 수정 시 유지 */
 
 const DRAFT_KEY = 'gt_quote_draft_v5';
 const HIST_KEY  = 'gt_quote_hist_v5';
-const PRICE_KEY = 'gt_price_cfg_v6'; /* v6: bus가 1인당 요금으로 변경 */
+const PRICE_KEY = 'gt_price_cfg_v7'; /* v7: 자유렌트 차종 7종·비수기/성수기 구조로 변경 */
 
 let season = 0;
 let seasonIsAuto = true;
@@ -752,7 +757,7 @@ function loadPriceCfg(){
   const base = {
     ship: {...DEFAULT_SHIP_FARE},
     tour: {...DEFAULT_TOUR_PRICE},
-    rent: {...DEFAULT_RENT_PRICE},
+    rent: JSON.parse(JSON.stringify(RENT_TABLE)), /* {veh:{off,peak}} 딥카피 */
     dokdo: DEFAULT_DOKDO_FARE,
     fuel: DEFAULT_FUEL_FARE,
   };
@@ -760,7 +765,7 @@ function loadPriceCfg(){
     const raw = JSON.parse(localStorage.getItem(PRICE_KEY)||'{}');
     if(raw.ship) Object.assign(base.ship, raw.ship);
     if(raw.tour) Object.assign(base.tour, raw.tour);
-    if(raw.rent) Object.assign(base.rent, raw.rent);
+    if(raw.rent) for(const k of RENT_ORDER){ if(raw.rent[k]) Object.assign(base.rent[k], raw.rent[k]); }
     if(typeof raw.dokdo==='number') base.dokdo = raw.dokdo;
     if(typeof raw.fuel==='number') base.fuel = raw.fuel;
   }catch(e){}
@@ -817,8 +822,10 @@ function fillTourSelects(){
   $('tourSel').innerHTML = TOUR_ORDER.map(k=>`<option value="${k}">${TOUR_LABEL[k]}</option>`).join('');
   $('rentVeh').innerHTML = RENT_ORDER.map(k=>`<option value="${k}">${RENT_LABEL[k]}</option>`).join('');
 }
+function rentBand(){ return season===2 ? 'peak' : 'off'; } /* 성수기=peak, 주중·주말=off */
+function rentBase(){ const v = CFG.rent[$('rentVeh').value]; return v ? (parseInt(v[rentBand()],10)||0) : 0; }
 function loadTourPriceInput(){ $('tourPrice').value = fmtWon(CFG.tour[$('tourSel').value] ?? 0); }
-function loadRentPriceInput(){ $('rentPrice').value = fmtWon(CFG.rent[$('rentVeh').value] ?? 0); }
+function loadRentPriceInput(){ $('rentPrice').value = fmtWon(rentBase()); }
 function loadShipFareInput(){ $('shipFare').value = fmtWon(CFG.ship[$('shipOut').value] ?? 0); }
 function loadDokdoFareInput(){ $('dokdoFare').value = fmtWon(CFG.dokdo ?? 0); }
 function loadFuelFareInput(){ $('fuelFare').value = fmtWon(CFG.fuel ?? 0); }
@@ -968,14 +975,13 @@ function getShips(){
   if(shipInSync || v==='same') v = out;
   return { out, in: v, mixed: v!==out };
 }
-/* 선택된 투어의 총액 (자유렌트는 선택 차종 요금) */
+/* 비-렌트 투어 총액/인당 요금 (CFG.tour) */
 function tourTotalPrice(){
-  const tour = $('tourSel').value;
-  if(tour==='rent'){
-    const veh = $('rentVeh').value || RENT_ORDER[0];
-    return Math.max(0, parseInt(CFG.rent[veh],10)||0);
-  }
-  return Math.max(0, parseInt(CFG.tour[tour],10)||0);
+  return Math.max(0, parseInt(CFG.tour[$('tourSel').value],10)||0);
+}
+/* 자유렌트 총액 = (차종 시즌 기준가 + 마진) × 박수 */
+function rentTotalPrice(nights){
+  return (rentBase() + RENT_MARGIN) * Math.max(1, nights);
 }
 /* ---- 완전 수동 모델: 총액 = 승선권(등급별) + 투어(총액÷인원) + 숙소 + 독도 ---- */
 function computeQuote(){
@@ -997,9 +1003,10 @@ function computeQuote(){
   /* 실효 인원: 인원 구성 합계와 직접 수정한 총 팀 인원 중 큰 값 (투어 인당 계산 기준) */
   const effPax = Math.max(totalPax, teamCountManual ? (parseInt($('teamCount').value,10)||0) : 0);
 
-  /* 투어 과금: pp=1인당 일괄(버스투어) × 실효인원, total=팀 총액 (인원 무관, 별도 라인) */
+  /* 투어 과금: pp=1인당 일괄(버스투어) × 실효인원, total=팀 총액 (인원 무관, 별도 라인)
+     자유렌트 = (차종 시즌 기준가 + 마진 1박당 1만) × 박수 → 총액 */
   const tourMode = tour==='rent' ? 'total' : (TOUR_MODE[tour]||'total');
-  const tourPrice = tourTotalPrice();
+  const tourPrice = tour==='rent' ? rentTotalPrice(nights) : tourTotalPrice();
   let tourPP, tourTotal;
   if(tourMode==='pp'){ tourPP = tourPrice; tourTotal = tourPrice * effPax; }
   else { tourTotal = tourPrice; tourPP = effPax>0 ? round100(tourTotal/effPax) : 0; }
@@ -1053,6 +1060,7 @@ function computeQuote(){
 
   return {ships, nights, dispNights, cruiseNight, tour, rentVeh, dokdo, season, counts, totalPax, effPax, total, lines,
           lodgings, lodgeExtra, shipFare, fuelFare, tourMode, tourTotal, tourPP, dokdoShip, dokdoPax, dokdoFare, dokdoSub,
+          rentBase: tour==='rent' ? rentBase() : 0, rentBand: season===2?'성수기':'비수기', rentMargin: RENT_MARGIN,
           dokdoPartial: dokdo && dokdoPax !== totalPax};
 }
 
@@ -1107,14 +1115,19 @@ function render(){
   $('rentRow').style.display = isRent ? 'grid' : 'none';
   $('tourPriceField').style.display = isRent ? 'none' : 'flex';
   $('tourPriceLabel').innerHTML = (q.tourMode==='pp' ? '투어 요금 (1인당)' : '투어 요금 (총액)') + ' <span class="badge-auto">수정 가능</span>';
+  $('rentPriceLabel').innerHTML = `차종 기준가 (${q.rentBand}) <span class="badge-auto">수정 가능</span>`;
   if(q.effPax<=0){
     $('tourPPHint').innerHTML = q.tourMode==='pp'
       ? `투어 요금이 1인당 일괄 적용됩니다.`
-      : `투어 요금은 팀 전체 총액입니다. 인원과 무관하게 총액이 그대로 청구되고, 1인당 환산은 참고용으로 표시됩니다.`;
+      : isRent
+        ? `자유렌트 = (차종 ${q.rentBand} 기준가 + 마진 ${fmt(q.rentMargin)}) × 박수. 인원 입력 시 1인당 환산이 표시됩니다.`
+        : `투어 요금은 팀 전체 총액입니다. 인원과 무관하게 총액이 그대로 청구되고, 1인당 환산은 참고용으로 표시됩니다.`;
   } else if(q.tourMode==='pp'){
     $('tourPPHint').innerHTML = `${TOUR_LABEL[q.tour]} <b>1인당 ${fmt(q.tourPP)}</b> × ${q.effPax}명 = 총액 <b>${fmt(q.tourTotal)}</b>`;
+  } else if(isRent){
+    $('tourPPHint').innerHTML = `${RENT_LABEL[q.rentVeh]||''} (${q.rentBand} ${fmt(q.rentBase)} + 마진 ${fmt(q.rentMargin)}) × ${q.nights}박 = 총액 <b>${fmt(q.tourTotal)}</b> ÷ ${q.effPax}명 = 1인당 <b>${fmt(q.tourPP)}</b>`;
   } else {
-    $('tourPPHint').innerHTML = `${TOUR_LABEL[q.tour]}${isRent?` · ${RENT_LABEL[q.rentVeh]||''}`:''} 총액 <b>${fmt(q.tourTotal)}</b> (인원 무관 고정) ÷ ${q.effPax}명 = 1인당 환산 <b>${fmt(q.tourPP)}</b>`;
+    $('tourPPHint').innerHTML = `${TOUR_LABEL[q.tour]} 총액 <b>${fmt(q.tourTotal)}</b> (인원 무관 고정) ÷ ${q.effPax}명 = 1인당 환산 <b>${fmt(q.tourPP)}</b>`;
   }
 
   /* 독도 컨트롤: 선박 미선택이면 시간대·시간·인원·요금 비활성화 */
@@ -1431,7 +1444,7 @@ function applyForm(f){
   $('daySel').value = f.daySel||'1';
   $('startDate').value = f.startDate||'';
   $('tourSel').value = f.tourSel||'bus';
-  $('rentVeh').value = f.rentVeh||'small';
+  $('rentVeh').value = f.rentVeh||'ray';
   loadTourPriceInput(); loadRentPriceInput();
   loadShipFareInput();
   if(f.shipFare){ $('shipFare').value = f.shipFare; reformatWonInput($('shipFare')); }
@@ -1536,6 +1549,7 @@ document.querySelectorAll('#seasonPills .pill').forEach(p=>{
     season = parseInt(p.dataset.v,10);
     seasonIsAuto = false;
     updateSeasonPills();
+    loadRentPriceInput(); /* 비수기/성수기 기준가 갱신 */
     render();
   });
 });
@@ -1546,6 +1560,7 @@ $('startDate').addEventListener('input', (e)=>{
     season = autoSeasonFromDate(e.target.value);
     seasonIsAuto = true;
     updateSeasonPills();
+    loadRentPriceInput(); /* 시즌 변동 시 차종 기준가 갱신 */
     $('f_startDate').classList.remove('error');
   }
   render();
@@ -1574,7 +1589,7 @@ function bindWonInput(id, setter){
   el.addEventListener('blur', ()=>{ reformatWonInput(el); });
 }
 bindWonInput('tourPrice', v=>{ CFG.tour[$('tourSel').value] = v; });
-bindWonInput('rentPrice', v=>{ CFG.rent[$('rentVeh').value] = v; });
+bindWonInput('rentPrice', v=>{ const veh=$('rentVeh').value; if(!CFG.rent[veh]) CFG.rent[veh]={off:0,peak:0}; CFG.rent[veh][rentBand()] = v; });
 bindWonInput('shipFare',  v=>{ CFG.ship[$('shipOut').value] = v; });
 bindWonInput('fuelFare',  v=>{ CFG.fuel = v; });
 bindWonInput('dokdoFare', v=>{ CFG.dokdo = v; });
@@ -1687,7 +1702,7 @@ $('resetBtn').addEventListener('click', ()=>{
   $('startDate').value='';
   $('endDate').value='';
   $('tourSel').value='bus';
-  $('rentVeh').value='small';
+  $('rentVeh').value='ray';
   loadTourPriceInput(); loadRentPriceInput(); loadShipFareInput(); loadDokdoFareInput(); loadFuelFareInput();
   $('dokdoShip').value='';
   $('dokdoAmpm').value='오전';
