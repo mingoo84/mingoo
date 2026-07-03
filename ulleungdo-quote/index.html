@@ -148,10 +148,9 @@ header.top p{margin:0;color:var(--on-dark-muted);font-size:13px;max-width:560px;
   display:inline-block;font-size:10.5px;font-weight:800;padding:2px 9px;border-radius:9999px;
   background:#fdeaea;color:var(--danger);border:1px solid #f3c7c7;
 }
-.price-bar{display:flex;align-items:center;justify-content:space-between;gap:12px;
-  background:var(--wave-green-bg);border-color:var(--wave-green-soft);}
-.price-bar.saved{animation:flashSaved .8s ease;}
-@keyframes flashSaved{0%{background:var(--wave-green-soft);}100%{background:var(--wave-green-bg);}}
+.price-save{display:flex;justify-content:flex-end;align-items:center;gap:8px;margin:2px 0 8px;}
+.price-save .price-save-btn{flex:0;min-width:auto;padding:8px 16px;font-size:12.5px;white-space:nowrap;}
+.price-save-btn.saved{background:var(--wave-green);color:var(--sea-deep);border-color:var(--wave-green);}
 
 /* 인원 구성 행 */
 .tier-row{
@@ -413,14 +412,6 @@ footer.note{text-align:center;color:var(--steel);font-size:12px;margin-top:26px;
   <div class="grid">
     <!-- ================= LEFT : 입력 ================= -->
     <div>
-      <div class="card price-bar">
-        <div style="min-width:0;">
-          <div style="font-weight:700;font-size:13.5px;display:flex;align-items:center;gap:7px;">💰 요금 설정 <span id="priceDirty" class="badge-dirty" style="display:none;">미저장</span></div>
-          <div class="hint" style="margin-top:3px;">‘수정 가능’ 요금(승선권·유류할증·투어·차량·독도)을 바꾼 뒤 <b>저장</b>을 눌러야 다음에도 유지됩니다.</div>
-        </div>
-        <button class="btn primary" id="savePriceBtn" style="flex:0;min-width:auto;padding:11px 20px;white-space:nowrap;">요금 저장</button>
-      </div>
-
       <div class="card">
         <h2><span class="num">1</span>고객 정보</h2>
         <div class="field-row">
@@ -505,7 +496,11 @@ footer.note{text-align:center;color:var(--steel);font-size:12px;margin-top:26px;
             <input id="fuelFare" type="text" inputmode="numeric" autocomplete="off">
           </div>
         </div>
-        <div class="hint" style="margin-bottom:14px;">승선권은 선사 기본값이 자동 입력되고 등급별 할인(소인 50% 등)이 이 금액 기준으로 적용됩니다. 유류할증료는 할인 없이 1인당 그대로 더해지며, 한 번 수정하면 계속 유지됩니다.</div>
+        <div class="price-save">
+          <span class="badge-dirty price-dirty" style="display:none;">미저장</span>
+          <button type="button" class="btn light price-save-btn">💾 요금 저장</button>
+        </div>
+        <div class="hint" style="margin-bottom:14px;">승선권은 선사 기본값이 자동 입력되고 등급별 할인(소인 50% 등)이 이 금액 기준으로 적용됩니다. 유류할증료는 할인 없이 1인당 그대로 더해집니다. 수정 후 <b>요금 저장</b>을 눌러야 다음에도 유지됩니다.</div>
 
         <h3 class="sub">③ 일자 · 시즌</h3>
         <div class="field-row">
@@ -576,7 +571,11 @@ footer.note{text-align:center;color:var(--steel);font-size:12px;margin-top:26px;
             <input id="dokdoFare" type="text" inputmode="numeric" autocomplete="off" disabled>
           </div>
         </div>
-        <div class="hint" style="margin-bottom:14px;">선박을 고르면 독도 코스가 포함되고 시간·인원·요금을 입력할 수 있습니다 (미선택이면 비활성화). 독도 추가요금은 <b>탐방 인원 × 1인 추가요금</b>으로 별도 항목 계산되며, 한 번 수정하면 계속 유지됩니다. 독도 운항 일정은 위 선사 페이지에서 확인하세요.</div>
+        <div class="price-save">
+          <span class="badge-dirty price-dirty" style="display:none;">미저장</span>
+          <button type="button" class="btn light price-save-btn">💾 요금 저장</button>
+        </div>
+        <div class="hint" style="margin-bottom:14px;">선박을 고르면 독도 코스가 포함되고 시간·인원·요금을 입력할 수 있습니다 (미선택이면 비활성화). 독도 추가요금은 <b>탐방 인원 × 1인 추가요금</b>으로 별도 항목 계산됩니다. 수정 후 <b>요금 저장</b>을 눌러야 유지됩니다. 독도 운항 일정은 위 선사 페이지에서 확인하세요.</div>
       </div>
 
       <div class="card">
@@ -613,6 +612,10 @@ footer.note{text-align:center;color:var(--steel);font-size:12px;margin-top:26px;
           </div>
         </div>
         <div class="hint" id="tourPPHint">투어 요금은 팀 전체 총액입니다. 1인당 = 총액 ÷ 인원으로 자동 계산되어 견적에 반영됩니다.</div>
+        <div class="price-save">
+          <span class="badge-dirty price-dirty" style="display:none;">미저장</span>
+          <button type="button" class="btn light price-save-btn">💾 요금 저장</button>
+        </div>
       </div>
 
       <div class="card">
@@ -880,7 +883,10 @@ function loadPriceCfg(){
 function savePriceCfg(){ try{ localStorage.setItem(PRICE_KEY, JSON.stringify(CFG)); }catch(e){} }
 let savedCfgJSON = JSON.stringify(CFG); /* 마지막으로 '저장'된 요금 스냅샷 */
 function priceIsDirty(){ return JSON.stringify(CFG) !== savedCfgJSON; }
-function updateDirty(){ const b=document.getElementById('priceDirty'); if(b) b.style.display = priceIsDirty() ? 'inline-block' : 'none'; }
+function updateDirty(){
+  const dirty = priceIsDirty();
+  document.querySelectorAll('.price-dirty').forEach(el=> el.style.display = dirty ? 'inline-block' : 'none');
+}
 
 /* ============================================================
    유틸
@@ -1922,8 +1928,8 @@ $('histClearBtn').addEventListener('click', ()=>{
   renderHistory();
 });
 
-/* 요금 설정 저장 — '수정 가능' 요금(승선권·유류할증·투어·차량·독도)을 확정 저장 */
-$('savePriceBtn').addEventListener('click', ()=>{
+/* 요금 설정 저장 — 각 섹션의 '요금 저장' 버튼 (승선권·유류할증·투어·차량·독도 일괄 확정) */
+function saveAllPrices(clickedBtn){
   /* blur 전 마지막 입력값을 CFG에 확정 반영 */
   ['tourPrice','rentPrice','shipFare','fuelFare','dokdoFare'].forEach(id=>{ const el=$(id); if(el) reformatWonInput(el); });
   CFG.tour[$('tourSel').value] = parseWonVal($('tourPrice').value);
@@ -1934,10 +1940,10 @@ $('savePriceBtn').addEventListener('click', ()=>{
   savePriceCfg();
   savedCfgJSON = JSON.stringify(CFG);
   updateDirty();
-  const bar = document.querySelector('.price-bar');
-  if(bar){ bar.classList.remove('saved'); void bar.offsetWidth; bar.classList.add('saved'); }
+  if(clickedBtn){ clickedBtn.classList.add('saved'); clickedBtn.textContent='✓ 저장됨'; setTimeout(()=>{ clickedBtn.classList.remove('saved'); clickedBtn.textContent='💾 요금 저장'; }, 1400); }
   toast('요금 설정이 저장되었습니다 · 다음에 열어도 유지됩니다');
-});
+}
+document.querySelectorAll('.price-save-btn').forEach(b=> b.addEventListener('click', ()=>saveAllPrices(b)));
 
 /* ============================================================
    초기화
