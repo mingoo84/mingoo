@@ -101,8 +101,8 @@ header.top p{margin:0;color:var(--on-dark-muted);font-size:13px;max-width:560px;
 @media(max-width:420px){ .field-row:not(.four){grid-template-columns:1fr;} }
 .field-row.four{grid-template-columns:repeat(4,1fr);}
 @media(max-width:560px){ .field-row.four{grid-template-columns:1fr 1fr;} }
-#rentRow{grid-template-columns:1.3fr 1fr 1.2fr;}
-@media(max-width:520px){ #rentRow{grid-template-columns:1fr 1fr;} }
+#rentRow{grid-template-columns:1.4fr 1fr 0.9fr 1.2fr;}
+@media(max-width:560px){ #rentRow{grid-template-columns:1fr 1fr;} }
 .time-inline{display:flex;align-items:center;gap:5px;}
 .time-inline select{flex:1;min-width:0;padding-left:8px;padding-right:22px;background-position:right 7px center;text-align:center;text-align-last:center;}
 .time-inline .tsep{font-weight:800;color:var(--steel);}
@@ -546,7 +546,7 @@ footer.note{text-align:center;color:var(--steel);font-size:12px;margin-top:26px;
         </div>
         <div class="field-row" id="rentRow" style="display:none;">
           <div class="field">
-            <label for="rentVeh">자유렌트 차종</label>
+            <label for="rentVeh">차종</label>
             <select id="rentVeh"></select>
           </div>
           <div class="field">
@@ -557,7 +557,11 @@ footer.note{text-align:center;color:var(--steel);font-size:12px;margin-top:26px;
             </select>
           </div>
           <div class="field">
-            <label for="rentPrice" id="rentPriceLabel">차종 기준가 <span class="badge-auto">수정 가능</span></label>
+            <label for="rentCount">차량대수</label>
+            <input id="rentCount" type="number" min="1" value="1" inputmode="numeric">
+          </div>
+          <div class="field">
+            <label for="rentPrice" id="rentPriceLabel">차량기준가 <span class="badge-auto">수정 가능</span></label>
             <input id="rentPrice" type="text" inputmode="numeric" autocomplete="off">
           </div>
         </div>
@@ -992,9 +996,11 @@ function getShips(){
 function tourTotalPrice(){
   return Math.max(0, parseInt(CFG.tour[$('tourSel').value],10)||0);
 }
-/* 자유렌트 총액 = (차종 시즌 기준가 + 마진) × 박수 */
+/* 자유렌트 대수 */
+function rentCount(){ return Math.max(1, parseInt($('rentCount').value,10)||1); }
+/* 자유렌트 총액 = (차종 시즌 기준가 + 마진) × 박수 × 차량대수 */
 function rentTotalPrice(nights){
-  return (rentBase() + RENT_MARGIN) * Math.max(1, nights);
+  return (rentBase() + RENT_MARGIN) * Math.max(1, nights) * rentCount();
 }
 /* ---- 완전 수동 모델: 총액 = 승선권(등급별) + 투어(총액÷인원) + 숙소 + 독도 ---- */
 function computeQuote(){
@@ -1073,7 +1079,7 @@ function computeQuote(){
 
   return {ships, nights, dispNights, cruiseNight, tour, rentVeh, dokdo, season, counts, totalPax, effPax, total, lines,
           lodgings, lodgeExtra, shipFare, fuelFare, tourMode, tourTotal, tourPP, dokdoShip, dokdoPax, dokdoFare, dokdoSub,
-          rentBase: tour==='rent' ? rentBase() : 0, rentBand: rentBand()==='peak'?'성수기':'비수기', rentMargin: RENT_MARGIN,
+          rentBase: tour==='rent' ? rentBase() : 0, rentBand: rentBand()==='peak'?'성수기':'비수기', rentMargin: RENT_MARGIN, rentCount: rentCount(),
           dokdoPartial: dokdo && dokdoPax !== totalPax};
 }
 
@@ -1139,7 +1145,7 @@ function render(){
   } else if(q.tourMode==='pp'){
     $('tourPPHint').innerHTML = `${TOUR_LABEL[q.tour]} <b>1인당 ${fmt(q.tourPP)}</b> × ${q.effPax}명 = 총액 <b>${fmt(q.tourTotal)}</b>`;
   } else if(isRent){
-    $('tourPPHint').innerHTML = `${RENT_LABEL[q.rentVeh]||''} (${q.rentBand} ${fmt(q.rentBase)} + 마진 ${fmt(q.rentMargin)}) × ${q.nights}박 = 총액 <b>${fmt(q.tourTotal)}</b> ÷ ${q.effPax}명 = 1인당 <b>${fmt(q.tourPP)}</b>`;
+    $('tourPPHint').innerHTML = `${RENT_LABEL[q.rentVeh]||''} (${q.rentBand} ${fmt(q.rentBase)} + 마진 ${fmt(q.rentMargin)}) × ${q.nights}박 × ${q.rentCount}대 = 총액 <b>${fmt(q.tourTotal)}</b> ÷ ${q.effPax}명 = 1인당 <b>${fmt(q.tourPP)}</b>`;
   } else {
     $('tourPPHint').innerHTML = `${TOUR_LABEL[q.tour]} 총액 <b>${fmt(q.tourTotal)}</b> (인원 무관 고정) ÷ ${q.effPax}명 = 1인당 환산 <b>${fmt(q.tourPP)}</b>`;
   }
@@ -1343,7 +1349,7 @@ function generateQuote(fromSticky){
     ? `   - ${l.label} = ${fmt(l.sub)}`
     : `   - ${l.label} ${l.c}명 × 1인 ${fmt(l.unit)} = ${fmt(l.sub)}`);
   if(q.lodgeExtra>0) paxLines.push(`   - 숙소 추가요금 = ${fmt(q.lodgeExtra)}`);
-  const tourName = TOUR_LABEL[q.tour] + (q.tour==='rent' ? `(${RENT_LABEL[q.rentVeh]||''})` : '');
+  const tourName = TOUR_LABEL[q.tour] + (q.tour==='rent' ? `(${RENT_LABEL[q.rentVeh]||''} ${q.rentBand} ${q.rentCount}대)` : '');
   if(q.tourMode!=='pp' && q.tourTotal>0 && q.effPax>0)
     paxLines.push(`   * ${tourName} 1인당 환산 약 ${fmt(q.tourPP)} (${q.effPax}명 기준)`);
   if(q.fuelFare>0) paxLines.push(`   * 유류할증료 1인 ${fmt(q.fuelFare)} 포함`);
@@ -1428,6 +1434,7 @@ function collectForm(){
     rentVeh: $('rentVeh').value,
     rentBandSel: $('rentBandSel').value,
     rentBandManual,
+    rentCount: $('rentCount').value,
     shipFare: $('shipFare').value,
     fuelFare: $('fuelFare').value,
     dokdoShip: $('dokdoShip').value,
@@ -1463,6 +1470,7 @@ function applyForm(f){
   $('rentVeh').value = f.rentVeh||'ray';
   rentBandManual = !!f.rentBandManual;
   $('rentBandSel').value = f.rentBandSel || autoRentBand();
+  $('rentCount').value = f.rentCount || 1;
   loadTourPriceInput(); loadRentPriceInput();
   loadShipFareInput();
   if(f.shipFare){ $('shipFare').value = f.shipFare; reformatWonInput($('shipFare')); }
@@ -1599,6 +1607,7 @@ $('shipOut').addEventListener('change', ()=>{ loadShipFareInput(); render(); });
 $('tourSel').addEventListener('change', ()=>{ loadTourPriceInput(); render(); });
 $('rentVeh').addEventListener('change', ()=>{ loadRentPriceInput(); render(); });
 $('rentBandSel').addEventListener('change', ()=>{ rentBandManual = true; loadRentPriceInput(); render(); });
+$('rentCount').addEventListener('input', render);
 
 /* 편집 가능한 요금 입력: 타이핑 중엔 그대로 두고(커서 유지), 칸을 벗어날 때만 쉼표 표시.
    값은 입력 즉시 CFG에 저장되어 계속 유지됩니다. */
@@ -1723,6 +1732,7 @@ $('resetBtn').addEventListener('click', ()=>{
   $('tourSel').value='bus';
   $('rentVeh').value='ray';
   rentBandManual=false; $('rentBandSel').value=autoRentBand();
+  $('rentCount').value=1;
   loadTourPriceInput(); loadRentPriceInput(); loadShipFareInput(); loadDokdoFareInput(); loadFuelFareInput();
   $('dokdoShip').value='';
   $('dokdoAmpm').value='오전';
