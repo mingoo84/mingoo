@@ -144,6 +144,14 @@ header.top p{margin:0;color:var(--on-dark-muted);font-size:13px;max-width:560px;
   background:var(--wave-green-soft);color:var(--wave-green-dark);margin-left:6px;vertical-align:1px;
   text-align:center;
 }
+.badge-dirty{
+  display:inline-block;font-size:10.5px;font-weight:800;padding:2px 9px;border-radius:9999px;
+  background:#fdeaea;color:var(--danger);border:1px solid #f3c7c7;
+}
+.price-bar{display:flex;align-items:center;justify-content:space-between;gap:12px;
+  background:var(--wave-green-bg);border-color:var(--wave-green-soft);}
+.price-bar.saved{animation:flashSaved .8s ease;}
+@keyframes flashSaved{0%{background:var(--wave-green-soft);}100%{background:var(--wave-green-bg);}}
 
 /* 인원 구성 행 */
 .tier-row{
@@ -405,6 +413,14 @@ footer.note{text-align:center;color:var(--steel);font-size:12px;margin-top:26px;
   <div class="grid">
     <!-- ================= LEFT : 입력 ================= -->
     <div>
+      <div class="card price-bar">
+        <div style="min-width:0;">
+          <div style="font-weight:700;font-size:13.5px;display:flex;align-items:center;gap:7px;">💰 요금 설정 <span id="priceDirty" class="badge-dirty" style="display:none;">미저장</span></div>
+          <div class="hint" style="margin-top:3px;">‘수정 가능’ 요금(승선권·유류할증·투어·차량·독도)을 바꾼 뒤 <b>저장</b>을 눌러야 다음에도 유지됩니다.</div>
+        </div>
+        <button class="btn primary" id="savePriceBtn" style="flex:0;min-width:auto;padding:11px 20px;white-space:nowrap;">요금 저장</button>
+      </div>
+
       <div class="card">
         <h2><span class="num">1</span>고객 정보</h2>
         <div class="field-row">
@@ -862,6 +878,9 @@ function loadPriceCfg(){
   return base;
 }
 function savePriceCfg(){ try{ localStorage.setItem(PRICE_KEY, JSON.stringify(CFG)); }catch(e){} }
+let savedCfgJSON = JSON.stringify(CFG); /* 마지막으로 '저장'된 요금 스냅샷 */
+function priceIsDirty(){ return JSON.stringify(CFG) !== savedCfgJSON; }
+function updateDirty(){ const b=document.getElementById('priceDirty'); if(b) b.style.display = priceIsDirty() ? 'inline-block' : 'none'; }
 
 /* ============================================================
    유틸
@@ -1749,7 +1768,8 @@ $('rentCount').addEventListener('input', render);
    값은 입력 즉시 CFG에 저장되어 계속 유지됩니다. */
 function bindWonInput(id, setter){
   const el = $(id);
-  el.addEventListener('input', ()=>{ setter(parseWonVal(el.value)); savePriceCfg(); render(); });
+  /* 타이핑 → CFG에 임시 반영(견적 미리보기 갱신) + '미저장' 표시. 실제 저장은 '요금 저장' 버튼에서 */
+  el.addEventListener('input', ()=>{ setter(parseWonVal(el.value)); updateDirty(); render(); });
   el.addEventListener('blur', ()=>{ reformatWonInput(el); });
 }
 bindWonInput('tourPrice', v=>{ CFG.tour[$('tourSel').value] = v; });
@@ -1902,6 +1922,23 @@ $('histClearBtn').addEventListener('click', ()=>{
   renderHistory();
 });
 
+/* 요금 설정 저장 — '수정 가능' 요금(승선권·유류할증·투어·차량·독도)을 확정 저장 */
+$('savePriceBtn').addEventListener('click', ()=>{
+  /* blur 전 마지막 입력값을 CFG에 확정 반영 */
+  ['tourPrice','rentPrice','shipFare','fuelFare','dokdoFare'].forEach(id=>{ const el=$(id); if(el) reformatWonInput(el); });
+  CFG.tour[$('tourSel').value] = parseWonVal($('tourPrice').value);
+  const veh=$('rentVeh').value; if(!CFG.rent[veh]) CFG.rent[veh]={off:0,peak:0}; CFG.rent[veh][rentBand()] = parseWonVal($('rentPrice').value);
+  CFG.ship[$('shipOut').value] = parseWonVal($('shipFare').value);
+  CFG.fuel = parseWonVal($('fuelFare').value);
+  CFG.dokdo = parseWonVal($('dokdoFare').value);
+  savePriceCfg();
+  savedCfgJSON = JSON.stringify(CFG);
+  updateDirty();
+  const bar = document.querySelector('.price-bar');
+  if(bar){ bar.classList.remove('saved'); void bar.offsetWidth; bar.classList.add('saved'); }
+  toast('요금 설정이 저장되었습니다 · 다음에 열어도 유지됩니다');
+});
+
 /* ============================================================
    초기화
    ============================================================ */
@@ -1917,6 +1954,7 @@ loadDraft();
 if(!document.querySelector('#lodgeList .lodge-row')) addLodgeRow(); /* 초기 빈 숙소 행 */
 updateSeasonPills();
 renderHistory();
+savedCfgJSON = JSON.stringify(CFG); updateDirty(); /* 로드 직후는 '저장됨' 상태 */
 render();
 </script>
 </body>
