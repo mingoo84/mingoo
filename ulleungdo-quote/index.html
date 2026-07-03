@@ -101,6 +101,9 @@ header.top p{margin:0;color:var(--on-dark-muted);font-size:13px;max-width:560px;
 @media(max-width:420px){ .field-row:not(.four){grid-template-columns:1fr;} }
 .field-row.four{grid-template-columns:repeat(4,1fr);}
 @media(max-width:560px){ .field-row.four{grid-template-columns:1fr 1fr;} }
+.time-inline{display:flex;align-items:center;gap:5px;}
+.time-inline select{flex:1;min-width:0;padding-left:8px;padding-right:22px;background-position:right 7px center;text-align:center;text-align-last:center;}
+.time-inline .tsep{font-weight:800;color:var(--steel);}
 .field{display:flex;flex-direction:column;gap:6px;}
 .field label{font-size:12.5px;color:var(--steel);font-weight:600;}
 .field input,.field select{
@@ -463,8 +466,12 @@ footer.note{text-align:center;color:var(--steel);font-size:12px;margin-top:26px;
             </select>
           </div>
           <div class="field">
-            <label for="dokdoTime">출항 시간</label>
-            <input id="dokdoTime" type="time" lang="en-GB" disabled>
+            <label for="dokdoHour">출항 시간</label>
+            <div class="time-inline">
+              <select id="dokdoHour" disabled aria-label="출항 시"></select>
+              <span class="tsep">:</span>
+              <select id="dokdoMin" disabled aria-label="출항 분"></select>
+            </div>
           </div>
           <div class="field">
             <label for="dokdoPax">탐방 인원 <span class="badge-auto" id="dokdoPaxBadge" style="display:none;">전원</span></label>
@@ -730,6 +737,22 @@ function addDays(dateStr, days){
 /* 크루즈(포항크루즈)는 전날 밤 출항 → 선상 1박이 추가됨. 가는편이 crz면 +1박 */
 function cruiseExtraNight(){ return $('shipOut').value === 'crz' ? 1 : 0; }
 function packLabel(n, spaced){ return spaced ? `${n}박 ${n+1}일` : `${n}박${n+1}일`; }
+/* 독도 출항 시간: 시:분 드롭다운 조합 → "H:MM" (시 미선택이면 빈 문자열) */
+function dokdoTimeStr(){
+  const h = $('dokdoHour').value;
+  if(!h) return '';
+  const m = $('dokdoMin').value || '00';
+  return `${h}:${m}`;
+}
+function fillTimeSelects(){
+  const hourSel = $('dokdoHour'), minSel = $('dokdoMin');
+  let ho = '<option value="">시</option>';
+  for(let h=1; h<=12; h++) ho += `<option value="${h}">${h}</option>`;
+  hourSel.innerHTML = ho;
+  let mo = '<option value="">분</option>';
+  for(let m=0; m<60; m+=5) mo += `<option value="${String(m).padStart(2,'0')}">${String(m).padStart(2,'0')}</option>`;
+  minSel.innerHTML = mo;
+}
 function numToKorean(num){
   if(num===0) return '영원';
   const digits=['','일','이','삼','사','오','육','칠','팔','구'];
@@ -1001,7 +1024,8 @@ function render(){
   /* 독도 컨트롤: 선박 미선택이면 시간대·시간·인원 비활성화 */
   const dokdoOn = !!q.dokdoShip;
   $('dokdoAmpm').disabled = !dokdoOn;
-  $('dokdoTime').disabled = !dokdoOn;
+  $('dokdoHour').disabled = !dokdoOn;
+  $('dokdoMin').disabled = !dokdoOn;
   $('dokdoPax').disabled = !dokdoOn;
   if(dokdoOn){
     if(!dokdoPaxManual) $('dokdoPax').value = q.totalPax;
@@ -1011,7 +1035,7 @@ function render(){
     $('dokdoPax').value = '';
     $('dokdoPaxBadge').style.display = 'none';
   }
-  ['dokdoPax','dokdoAmpm','dokdoTime'].forEach(id=>{
+  ['dokdoPax','dokdoAmpm','dokdoHour'].forEach(id=>{
     const lab = document.querySelector(`label[for="${id}"]`);
     if(lab) lab.classList.toggle('dim', !dokdoOn);
   });
@@ -1196,7 +1220,7 @@ function generateQuote(fromSticky){
   const paxLines = q.lines.map(l=>`   - ${l.label} ${l.c}명 × 1인 ${fmt(l.unit)} = ${fmt(l.sub)}`);
   if(q.lodgeExtra>0) paxLines.push(`   - 숙소 추가요금 = ${fmt(q.lodgeExtra)}`);
 
-  const dokdoTime = $('dokdoTime').value;
+  const dokdoTime = dokdoTimeStr();
   const dokdoAmpm = $('dokdoAmpm').value;
   const dk = {ship: q.dokdoShip, ampm: dokdoAmpm, time: dokdoTime};
   const rows = buildItineraryRows(q.nights, q.tour, q.dokdo, q.snorkel, dk, q.cruiseNight);
@@ -1272,7 +1296,8 @@ function collectForm(){
     dokdo: $('dokdoChk').checked,
     dokdoShip: $('dokdoShip').value,
     dokdoAmpm: $('dokdoAmpm').value,
-    dokdoTime: $('dokdoTime').value,
+    dokdoHour: $('dokdoHour').value,
+    dokdoMin: $('dokdoMin').value,
     dokdoPax: $('dokdoPax').value,
     dokdoPaxManual,
     snorkel: $('snorkelChk').checked,
@@ -1303,7 +1328,8 @@ function applyForm(f){
   $('dokdoChk').checked = !!f.dokdo;
   $('dokdoShip').value = f.dokdoShip||'';
   $('dokdoAmpm').value = f.dokdoAmpm||'오전';
-  $('dokdoTime').value = f.dokdoTime||'';
+  $('dokdoHour').value = f.dokdoHour||'';
+  $('dokdoMin').value = f.dokdoMin||'';
   dokdoPaxManual = !!f.dokdoPaxManual;
   if(dokdoPaxManual && f.dokdoPax) $('dokdoPax').value = f.dokdoPax;
   $('snorkelChk').checked = !!f.snorkel;
@@ -1444,21 +1470,15 @@ $('dokdoShip').addEventListener('change', ()=>{
     }
   } else {
     $('dokdoChk').checked = false;
-    $('dokdoTime').value = '';
+    $('dokdoHour').value = '';
+    $('dokdoMin').value = '';
     $('dokdoAmpm').value = '오전';
     dokdoPaxManual = false;
   }
   render();
 });
-/* 시간 입력 시 오전/오후 자동 판별 */
-$('dokdoTime').addEventListener('change', ()=>{
-  const v = $('dokdoTime').value;
-  if(v){
-    const h = parseInt(v.split(':')[0],10);
-    $('dokdoAmpm').value = h < 12 ? '오전' : '오후';
-  }
-  render();
-});
+$('dokdoHour').addEventListener('change', render);
+$('dokdoMin').addEventListener('change', render);
 $('dokdoAmpm').addEventListener('change', render);
 /* 독도 인원: 직접 수정하면 수동 모드, 비우거나 인원 구성 합계와 같으면 전원 참여로 복귀
    상한 = 총 팀 인원(직접 수정 시)과 인원 구성 합계 중 큰 값 */
@@ -1478,7 +1498,8 @@ $('dokdoPax').addEventListener('input', ()=>{
 $('dokdoChk').addEventListener('change', ()=>{
   if(!$('dokdoChk').checked && $('dokdoShip').value){
     $('dokdoShip').value = '';
-    $('dokdoTime').value = '';
+    $('dokdoHour').value = '';
+    $('dokdoMin').value = '';
     $('dokdoAmpm').value = '오전';
     dokdoPaxManual = false;
     render();
@@ -1555,7 +1576,8 @@ $('resetBtn').addEventListener('click', ()=>{
   $('dokdoChk').checked=false;
   $('dokdoShip').value='';
   $('dokdoAmpm').value='오전';
-  $('dokdoTime').value='';
+  $('dokdoHour').value='';
+  $('dokdoMin').value='';
   $('dokdoPax').value='';
   dokdoPaxManual=false;
   $('snorkelChk').checked=false;
@@ -1589,6 +1611,7 @@ $('histClearBtn').addEventListener('click', ()=>{
    초기화
    ============================================================ */
 buildTierRows();
+fillTimeSelects();
 loadDraft();
 updateSeasonPills();
 renderHistory();
