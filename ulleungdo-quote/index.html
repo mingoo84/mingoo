@@ -514,7 +514,7 @@ footer.note{text-align:center;color:var(--steel);font-size:12px;margin-top:26px;
       </div>
 
       <div class="card">
-        <h2><span class="num">3</span>투어방법 · 숙소</h2>
+        <h2><span class="num">3</span>투어방법</h2>
         <div class="field-row">
           <div class="field">
             <label for="tourSel">투어 방법</label>
@@ -526,26 +526,24 @@ footer.note{text-align:center;color:var(--steel);font-size:12px;margin-top:26px;
             </select>
           </div>
           <div class="field" style="justify-content:flex-end;">
-            <div class="checkline" style="margin-top:0;">
-              <input type="checkbox" id="dokdoChk">
-              <label for="dokdoChk">독도 코스 포함</label>
-            </div>
-            <div class="checkline" id="snorkelWrap" style="display:none;">
+            <div class="checkline" id="snorkelWrap" style="display:none;margin-top:0;">
               <input type="checkbox" id="snorkelChk">
               <label for="snorkelChk">스노클링 추가 (+20,000원/인)</label>
             </div>
           </div>
         </div>
         <div class="hint" id="tourHint" style="display:none;">콤비투어는 버스투어·택시투어 요금의 평균으로 계산합니다.</div>
+      </div>
 
-        <h3 class="sub">숙소 (여러 개 추가 가능)</h3>
+      <div class="card">
+        <h2><span class="num">4</span>숙소</h2>
         <div id="lodgeList"></div>
         <div class="lodge-price-hint">추가요금: 패키지에 포함된 기본 숙소와의 차액. 0이면 총액에 반영되지 않고 견적서에 표기만 됩니다.</div>
         <button type="button" class="btn light" id="addLodgeBtn" style="flex:0;min-width:auto;padding:12px 20px;font-size:13.5px;">+ 숙소 추가</button>
       </div>
 
       <div class="card" id="paxCard">
-        <h2><span class="num">4</span>인원 구성 <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--steel);">— 등급별 1인당 금액 실시간 표시</span></h2>
+        <h2><span class="num">5</span>인원 구성 <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--steel);">— 등급별 1인당 금액 실시간 표시</span></h2>
         <div id="tierList"></div>
       </div>
     </div>
@@ -910,7 +908,7 @@ function computeQuote(){
   const ships = getShips();
   const nights = parseInt($('daySel').value,10);
   const tour = $('tourSel').value;
-  const dokdo = $('dokdoChk').checked;
+  const dokdo = !!$('dokdoShip').value;
   const snorkel = tour==='rent' && $('snorkelChk').checked;
 
   /* 인원 집계 먼저 */
@@ -1293,7 +1291,6 @@ function collectForm(){
     daySel: $('daySel').value,
     startDate: $('startDate').value,
     tourSel: $('tourSel').value,
-    dokdo: $('dokdoChk').checked,
     dokdoShip: $('dokdoShip').value,
     dokdoAmpm: $('dokdoAmpm').value,
     dokdoHour: $('dokdoHour').value,
@@ -1325,8 +1322,7 @@ function applyForm(f){
   $('daySel').value = f.daySel||'1';
   $('startDate').value = f.startDate||'';
   $('tourSel').value = f.tourSel||'bus';
-  $('dokdoChk').checked = !!f.dokdo;
-  $('dokdoShip').value = f.dokdoShip||'';
+  $('dokdoShip').value = f.dokdoShip||(f.dokdo?'썬라이즈호':'');
   $('dokdoAmpm').value = f.dokdoAmpm||'오전';
   $('dokdoHour').value = f.dokdoHour||'';
   $('dokdoMin').value = f.dokdoMin||'';
@@ -1445,7 +1441,7 @@ $('staffName').addEventListener('change', ()=>{
   render();
 });
 
-['shipOut','tourSel','dokdoChk','snorkelChk','custName'].forEach(id=>{
+['shipOut','tourSel','snorkelChk','custName'].forEach(id=>{
   $(id).addEventListener('input', render);
   $(id).addEventListener('change', render);
 });
@@ -1461,15 +1457,11 @@ $('custName').addEventListener('input', ()=>{
   if($('custName').value.trim()) $('f_custName').classList.remove('error');
 });
 
-/* 독도 탐방: 선박을 고르면 독도 코스 자동 체크, 미선택이면 해제 + 하위 컨트롤 초기화 */
+/* 독도 탐방: 선박을 고르면 독도 코스 자동 포함, 미선택이면 하위 컨트롤 초기화 */
 $('dokdoShip').addEventListener('change', ()=>{
   if($('dokdoShip').value){
-    if(!$('dokdoChk').checked){
-      $('dokdoChk').checked = true;
-      toast('독도 코스 포함이 자동으로 체크되었습니다');
-    }
+    toast('독도 코스가 견적에 포함되었습니다');
   } else {
-    $('dokdoChk').checked = false;
     $('dokdoHour').value = '';
     $('dokdoMin').value = '';
     $('dokdoAmpm').value = '오전';
@@ -1493,17 +1485,6 @@ $('dokdoPax').addEventListener('input', ()=>{
     toast(`독도 탐방 인원은 총 ${cap}명까지 가능합니다`, true);
   }
   render();
-});
-/* 독도 체크 해제 시 선박·시간·인원 리셋 */
-$('dokdoChk').addEventListener('change', ()=>{
-  if(!$('dokdoChk').checked && $('dokdoShip').value){
-    $('dokdoShip').value = '';
-    $('dokdoHour').value = '';
-    $('dokdoMin').value = '';
-    $('dokdoAmpm').value = '오전';
-    dokdoPaxManual = false;
-    render();
-  }
 });
 
 $('teamCount').addEventListener('input', ()=>{
@@ -1573,7 +1554,6 @@ $('resetBtn').addEventListener('click', ()=>{
   $('startDate').value='';
   $('endDate').value='';
   $('tourSel').value='bus';
-  $('dokdoChk').checked=false;
   $('dokdoShip').value='';
   $('dokdoAmpm').value='오전';
   $('dokdoHour').value='';
