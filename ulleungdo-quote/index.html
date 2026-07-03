@@ -390,6 +390,7 @@ footer.note{text-align:center;color:var(--steel);font-size:12px;margin-top:26px;
             <label for="teamCount">인원(총 팀 인원) <span class="badge-auto" id="teamBadge">자동 합산</span></label>
             <input id="teamCount" type="number" min="0" value="1" inputmode="numeric">
             <span class="hint" style="margin-top:2px;">평소엔 인원 구성 합계로 자동 입력됩니다. 무료 유아 등 포함 총원이 다르면 직접 고치세요 — "N인팀" 문구에 반영됩니다.</span>
+            <span class="hint" id="teamWarn" style="display:none;color:var(--danger);margin-top:2px;"></span>
           </div>
         </div>
       </div>
@@ -468,7 +469,7 @@ footer.note{text-align:center;color:var(--steel);font-size:12px;margin-top:26px;
             <input id="dokdoTime" type="time" disabled>
           </div>
         </div>
-        <div class="hint" style="margin-bottom:14px;">선박을 고르면 독도 코스가 자동 포함되고 시간·인원을 입력할 수 있습니다 (미선택이면 비활성화). 탐방 인원이 전체 인원보다 적으면, 미참여 인원은 독도 요금이 빠지고 <b>참여 인원 × 대인 기준 독도 추가요금</b>이 별도 항목으로 계산됩니다. 독도 운항 일정은 위 선사 페이지에서 확인하세요.</div>
+        <div class="hint" style="margin-bottom:14px;">선박을 고르면 독도 코스가 자동 포함되고 시간·인원을 입력할 수 있습니다 (미선택이면 비활성화). 탐방 인원이 인원 구성 합계보다 <b>적으면</b> 미참여 인원은 독도 요금이 빠지고, <b>많으면</b>(무료 유아 동반 등) 초과 인원만큼 대인 기준 독도 추가요금이 별도 항목으로 붙습니다. 독도 운항 일정은 위 선사 페이지에서 확인하세요.</div>
 
         <h3 class="sub">④ 일자 · 시즌</h3>
         <div class="field-row">
@@ -888,17 +889,18 @@ function computeQuote(){
   TIERS.forEach(t=>{ counts[t.key] = Math.max(0, parseInt($(`cnt_${t.key}`).value,10)||0); });
   const totalPax = Object.values(counts).reduce((a,b)=>a+b,0);
 
-  /* 독도 부분 참여 판단: 선박 선택 + 인원 직접 수정 + 전체보다 적을 때만 */
+  /* 독도 탐방 인원: 상한은 총 팀 인원(직접 수정 시)과 인원 구성 합계 중 큰 값 */
   const dokdoShip = $('dokdoShip').value;
+  const teamPaxCap = Math.max(totalPax, teamCountManual ? (parseInt($('teamCount').value,10)||0) : 0);
   let dokdoPax = totalPax;
   if(dokdo && dokdoShip && dokdoPaxManual){
     const dp = parseInt($('dokdoPax').value,10);
-    if(!isNaN(dp)) dokdoPax = Math.max(0, Math.min(dp, totalPax));
+    if(!isNaN(dp)) dokdoPax = Math.max(0, Math.min(dp, teamPaxCap));
   }
-  const dokdoPartial = dokdo && dokdoPax < totalPax;
+  const dokdoPartial = dokdo && dokdoPax !== totalPax;
 
-  /* 전원 참여면 원장 독도 열 그대로, 부분 참여면 기본가 + 별도 추가요금 */
-  const col = season + (dokdo && !dokdoPartial ? 3 : 0);
+  /* 요금제 인원 전원이 참여하면 원장 독도 열 그대로, 미만이면 기본가 + 참여자 추가요금 */
+  const col = season + (dokdo && dokdoPax >= totalPax ? 3 : 0);
 
   let total = 0;
   const lines = [];
@@ -915,16 +917,19 @@ function computeQuote(){
     }
   });
 
-  /* 부분 참여: 참여 인원 × 대인 기준 독도 추가요금 (가는편·오는편 평균) */
+  /* 부분/초과 참여: 대인 기준 독도 추가요금 (가는편·오는편 평균)
+     - 참여 인원 < 인원 구성 합계 → 전원 기본가 + 참여자 × 추가요금
+     - 참여 인원 > 인원 구성 합계 → 전원 독도가 + 초과분(무료동반 등) × 추가요금 */
   let dokdoUnit = 0;
-  if(dokdoPartial && dokdoPax > 0){
+  const extraCnt = !dokdo ? 0 : (dokdoPax < totalPax ? dokdoPax : dokdoPax - totalPax);
+  if(extraCnt > 0){
     const surchOut = shipUnitRaw(ships.out, nights, 'adult', tour, snorkel, season+3)
                    - shipUnitRaw(ships.out, nights, 'adult', tour, snorkel, season);
     const surchIn  = shipUnitRaw(ships.in,  nights, 'adult', tour, snorkel, season+3)
                    - shipUnitRaw(ships.in,  nights, 'adult', tour, snorkel, season);
     dokdoUnit = round100((surchOut + surchIn) / 2);
-    total += dokdoUnit * dokdoPax;
-    lines.push({key:'dokdo', label:'독도 탐방 추가', c:dokdoPax, unit:dokdoUnit, sub:dokdoUnit*dokdoPax});
+    total += dokdoUnit * extraCnt;
+    lines.push({key:'dokdo', label:'독도 탐방 추가', c:extraCnt, unit:dokdoUnit, sub:dokdoUnit*extraCnt});
   }
 
   const lodgings = getLodgings();
@@ -1014,6 +1019,15 @@ function render(){
   if(!teamCountManual){ $('teamCount').value = q.totalPax; }
   $('teamBadge').textContent = teamCountManual ? '직접 수정됨' : '자동 합산';
   $('depositLine').innerHTML = `계약금 <b>${fmt(q.totalPax*DEPOSIT_PER_PERSON)}</b> (${q.totalPax}인 × ${fmt(DEPOSIT_PER_PERSON)})`;
+
+  /* 총 팀 인원(직접 수정)과 인원 구성 합계가 다르면 경고 */
+  const manualTeam = teamCountManual ? (parseInt($('teamCount').value,10)||0) : 0;
+  if(teamCountManual && manualTeam !== q.totalPax){
+    $('teamWarn').style.display = 'block';
+    $('teamWarn').textContent = `요금 계산은 인원 구성 합계(${q.totalPax}명) 기준입니다. 총 팀 인원(${manualTeam}명)과 다르니 아래 '인원 구성'을 확인하세요.`;
+  } else {
+    $('teamWarn').style.display = 'none';
+  }
 
   /* 등급별: 인원 × 1인당 = 소계 */
   const bd = $('breakdown');
@@ -1425,15 +1439,17 @@ $('dokdoTime').addEventListener('change', ()=>{
   render();
 });
 $('dokdoAmpm').addEventListener('change', render);
-/* 독도 인원: 직접 수정하면 수동 모드, 비우거나 전체와 같으면 전원 참여로 복귀 */
+/* 독도 인원: 직접 수정하면 수동 모드, 비우거나 인원 구성 합계와 같으면 전원 참여로 복귀
+   상한 = 총 팀 인원(직접 수정 시)과 인원 구성 합계 중 큰 값 */
 $('dokdoPax').addEventListener('input', ()=>{
   const raw = $('dokdoPax').value.trim();
   const v = parseInt(raw,10);
   const q0 = computeQuote();
-  dokdoPaxManual = !(raw==='' || isNaN(v) || v>=q0.totalPax);
-  if(!isNaN(v) && v > q0.totalPax){
-    $('dokdoPax').value = q0.totalPax;
-    toast('독도 탐방 인원은 전체 인원을 넘을 수 없습니다', true);
+  const cap = Math.max(q0.totalPax, teamCountManual ? (parseInt($('teamCount').value,10)||0) : 0);
+  dokdoPaxManual = !(raw==='' || isNaN(v) || v===q0.totalPax);
+  if(!isNaN(v) && v > cap){
+    $('dokdoPax').value = cap;
+    toast(`독도 탐방 인원은 총 ${cap}명까지 가능합니다`, true);
   }
   render();
 });
@@ -1455,7 +1471,7 @@ $('teamCount').addEventListener('input', ()=>{
   teamCountManual = !(raw==='' || isNaN(v) || v===sum);
   $('teamBadge').textContent = teamCountManual ? '직접 수정됨' : '자동 합산';
   if(!teamCountManual && raw==='') $('teamCount').value = sum;
-  saveDraft();
+  render();
 });
 
 $('addLodgeBtn').addEventListener('click', ()=>{ addLodgeRow(); });
