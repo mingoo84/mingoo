@@ -198,11 +198,13 @@ select.tier-group{
   position:absolute;z-index:70;background:var(--canvas);
   border:1.5px solid var(--hairline-strong);border-radius:10px;box-shadow:0 6px 20px rgba(4,38,59,.18);
   max-height:210px;overflow-y:auto;display:none;-webkit-overflow-scrolling:touch;
+  max-width:min(260px,86vw);
 }
 .ac-menu.show{display:block;}
 .ac-menu button{
   display:block;width:100%;text-align:left;border:none;background:none;
-  padding:10px 12px;font-size:13px;font-family:inherit;color:var(--ink);cursor:pointer;white-space:nowrap;
+  padding:10px 12px;font-size:13px;font-family:inherit;color:var(--ink);cursor:pointer;
+  white-space:normal;word-break:keep-all;line-height:1.35;
 }
 .ac-menu button:hover{background:var(--wave-green-bg);}
 .lodge-row select,.lodge-row input{
@@ -1058,11 +1060,18 @@ function addLodgeRow(data){
     if(!filtered.length){ hideMenu(); return; }
     menu.innerHTML = filtered.map(it=>`<button type="button" data-v="${esc(it)}">${esc(it)}</button>`).join('');
     menu.style.left = inputEl.offsetLeft+'px';
+    menu.style.right = 'auto';
     menu.style.top = (inputEl.offsetTop + inputEl.offsetHeight + 3)+'px';
     menu.style.minWidth = inputEl.offsetWidth+'px';
     menu.classList.add('show');
     row.style.zIndex = '70';
     acPick = onPick;
+    /* 오른쪽 화면 밖으로 넘치면 입력칸 오른쪽 끝에 맞춰 정렬 */
+    const mr = menu.getBoundingClientRect();
+    if(mr.right > window.innerWidth - 8){
+      menu.style.left = 'auto';
+      menu.style.right = Math.max(0, row.offsetWidth - (inputEl.offsetLeft + inputEl.offsetWidth))+'px';
+    }
   }
   menu.addEventListener('mousedown', (e)=>{ /* mousedown이 blur보다 먼저 */
     const b = e.target.closest('button'); if(!b) return;
