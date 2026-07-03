@@ -159,8 +159,20 @@ select.tier-group{
 .stepper input::-webkit-outer-spin-button,.stepper input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0;}
 
 .checkline{display:flex;align-items:center;gap:10px;margin-top:10px;}
-.checkline input{width:19px;height:19px;accent-color:var(--wave-green-dark);}
-.checkline label{font-size:14px;font-weight:700;}
+.checkline input{
+  -webkit-appearance:none;appearance:none;
+  width:22px;height:22px;min-width:22px;padding:0;margin:0;
+  border:1.5px solid var(--hairline-strong);border-radius:6px;
+  background:var(--canvas);cursor:pointer;flex-shrink:0;
+  transition:background-color .12s,border-color .12s;
+}
+.checkline input:checked{
+  background-color:var(--wave-green-dark);border-color:var(--wave-green-dark);
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 10'%3E%3Cpath d='M1 5.5L4.2 8.5L11 1.5' fill='none' stroke='white' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;background-position:center;background-size:14px 12px;
+}
+.checkline input:focus-visible{outline:2px solid var(--wave-green-dark);outline-offset:2px;}
+.checkline label{font-size:14px;font-weight:700;cursor:pointer;}
 
 /* 숙소 리스트 */
 .lodge-row{
