@@ -5,7 +5,7 @@
 일자·인원·선박·투어·숙소만 고르면 **금액 계산 → 견적서 문구 → 견적서 이미지(PNG)** 까지 자동으로 완성됩니다.
 완성된 문구는 카카오톡/문자에 바로 붙여넣고, 이미지는 PNG로 저장해 전송하세요.
 
-**설치 없음. 서버 없음. `src/index.html` 파일 하나를 브라우저로 열면 끝.**
+**설치 없음. 서버 없음. `index.html` 파일 하나를 브라우저로 열면 끝.**
 
 ---
 
@@ -49,17 +49,22 @@
 
 ## 🚀 사용 방법
 
-1. 이 저장소를 클론하거나 `src/index.html` 파일만 다운로드
+1. 이 저장소를 클론하거나 `index.html` 파일만 다운로드
 2. 브라우저(크롬 권장)로 열기 — 모바일/PC 모두 지원
 3. 위에서 아래로 순서대로 입력 → **견적서 문구 생성** → 복사 or PNG 저장
 
 > PNG 저장 기능은 html2canvas CDN을 사용하므로 최초 로딩 시 인터넷 연결이 필요합니다.
 
+### ▲ Vercel 배포
+이 폴더(`ulleungdo-quote`)를 프로젝트 루트로 배포하면 됩니다 — `index.html`이 루트에 있어 별도 설정이 필요 없습니다.
+- Framework Preset: **Other** · Build Command: 없음 · Output Directory: 기본값
+- 상위 폴더 전체를 배포한 경우에도 루트의 리다이렉트 `index.html`이 `/ulleungdo-quote/`로 자동 이동시킵니다.
+
 ---
 
 ## 🔧 설정 변경 포인트
 
-모든 설정은 `src/index.html`의 `<script>` 상단에 모여 있습니다.
+모든 설정은 `index.html`의 `<script>` 상단에 모여 있습니다.
 
 | 상수 | 용도 |
 |---|---|
@@ -84,8 +89,8 @@
 ```
 ulleungdo-quote/
 ├── README.md              ← 이 문서
+├── index.html             ← 앱 본체 (단일 파일, 이것만 배포하면 됨)
 ├── src/
-│   ├── index.html         ← 앱 본체 (단일 파일, 이것만 배포하면 됨)
 │   └── prices.js          ← 가격 원장 사본 (검증 기준용 — 앱은 index.html 내장본 사용)
 └── docs/
     └── 01-code-analysis.md ← 구버전 분석 문서 (버그 12건 기록)
