@@ -1152,8 +1152,9 @@ function computeQuote(){
   const totalPax = Object.values(counts).reduce((a,b)=>a+b,0);
 
   /* 승선권(대인 1인) + 유류할증료(1인, 할인 없음) */
-  const shipFare = parseWonVal($('shipFare').value);
-  const fuelFare = parseWonVal($('fuelFare').value);
+  /* 요금은 항상 CFG(저장된 설정)에서 읽는다 — 입력칸/이력이 값을 흔들지 않도록 */
+  const shipFare = Math.max(0, parseInt(CFG.ship[$('shipOut').value],10)||0);
+  const fuelFare = Math.max(0, parseInt(CFG.fuel,10)||0);
 
   /* 실효 인원: 인원 구성 합계와 직접 수정한 총 팀 인원 중 큰 값 (투어 인당 계산 기준) */
   const effPax = Math.max(totalPax, teamCountManual ? (parseInt($('teamCount').value,10)||0) : 0);
@@ -1573,8 +1574,6 @@ function collectForm(){
     rentBandSel: $('rentBandSel').value,
     rentBandManual,
     rentCount: $('rentCount').value,
-    shipFare: $('shipFare').value,
-    fuelFare: $('fuelFare').value,
     dokdoShip: $('dokdoShip').value,
     dokdoAmpm: $('dokdoAmpm').value,
     dokdoHour: $('dokdoHour').value,
@@ -1610,10 +1609,9 @@ function applyForm(f){
   $('rentBandSel').value = f.rentBandSel || autoRentBand();
   $('rentCount').value = f.rentCount || 1;
   loadTourPriceInput(); loadRentPriceInput();
+  /* 요금(승선권·유류할증)은 CFG에서만 로드 — 이력/임시저장이 덮어쓰지 않음 */
   loadShipFareInput();
-  if(f.shipFare){ $('shipFare').value = f.shipFare; reformatWonInput($('shipFare')); }
   loadFuelFareInput();
-  if(f.fuelFare){ $('fuelFare').value = f.fuelFare; reformatWonInput($('fuelFare')); }
   loadDokdoFareInput();
   $('dokdoShip').value = f.dokdoShip||'';
   $('dokdoAmpm').value = f.dokdoAmpm||'오전';
