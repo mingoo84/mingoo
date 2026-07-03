@@ -101,6 +101,8 @@ header.top p{margin:0;color:var(--on-dark-muted);font-size:13px;max-width:560px;
 @media(max-width:420px){ .field-row:not(.four){grid-template-columns:1fr;} }
 .field-row.four{grid-template-columns:repeat(4,1fr);}
 @media(max-width:560px){ .field-row.four{grid-template-columns:1fr 1fr;} }
+#rentRow{grid-template-columns:1.3fr 1fr 1.2fr;}
+@media(max-width:520px){ #rentRow{grid-template-columns:1fr 1fr;} }
 .time-inline{display:flex;align-items:center;gap:5px;}
 .time-inline select{flex:1;min-width:0;padding-left:8px;padding-right:22px;background-position:right 7px center;text-align:center;text-align-last:center;}
 .time-inline .tsep{font-weight:800;color:var(--steel);}
@@ -548,6 +550,13 @@ footer.note{text-align:center;color:var(--steel);font-size:12px;margin-top:26px;
             <select id="rentVeh"></select>
           </div>
           <div class="field">
+            <label for="rentBandSel">시즌 <span class="badge-auto" id="rentBandBadge">자동</span></label>
+            <select id="rentBandSel">
+              <option value="off">비수기</option>
+              <option value="peak">성수기</option>
+            </select>
+          </div>
+          <div class="field">
             <label for="rentPrice" id="rentPriceLabel">차종 기준가 <span class="badge-auto">수정 가능</span></label>
             <input id="rentPrice" type="text" inputmode="numeric" autocomplete="off">
           </div>
@@ -750,6 +759,7 @@ let seasonIsAuto = true;
 let teamCountManual = false;
 let dokdoPaxManual = false; // 독도 탐방 인원을 직접 수정했는지 (false면 전체 인원 자동)
 let shipInSync = true;      // 오는편이 가는편을 따라가는 상태인지
+let rentBandManual = false; // 자유렌트 시즌(비수기/성수기)을 직접 선택했는지
 
 /* 편집 가능한 요금 설정 (localStorage에 별도 저장 — 입력 초기화해도 유지) */
 let CFG = loadPriceCfg();
@@ -822,7 +832,10 @@ function fillTourSelects(){
   $('tourSel').innerHTML = TOUR_ORDER.map(k=>`<option value="${k}">${TOUR_LABEL[k]}</option>`).join('');
   $('rentVeh').innerHTML = RENT_ORDER.map(k=>`<option value="${k}">${RENT_LABEL[k]}</option>`).join('');
 }
-function rentBand(){ return season===2 ? 'peak' : 'off'; } /* 성수기=peak, 주중·주말=off */
+/* 자유렌트 시즌: 차종 옆 선택값이 우선(자동은 요금시즌 성수기=peak). */
+function rentBand(){ const el=$('rentBandSel'); return el && el.value ? el.value : (season===2?'peak':'off'); }
+function autoRentBand(){ return season===2 ? 'peak' : 'off'; }
+function syncRentBand(){ if(!rentBandManual){ $('rentBandSel').value = autoRentBand(); } if($('rentBandBadge')) $('rentBandBadge').textContent = rentBandManual ? '직접 선택' : '자동'; }
 function rentBase(){ const v = CFG.rent[$('rentVeh').value]; return v ? (parseInt(v[rentBand()],10)||0) : 0; }
 function loadTourPriceInput(){ $('tourPrice').value = fmtWon(CFG.tour[$('tourSel').value] ?? 0); }
 function loadRentPriceInput(){ $('rentPrice').value = fmtWon(rentBase()); }
@@ -1060,7 +1073,7 @@ function computeQuote(){
 
   return {ships, nights, dispNights, cruiseNight, tour, rentVeh, dokdo, season, counts, totalPax, effPax, total, lines,
           lodgings, lodgeExtra, shipFare, fuelFare, tourMode, tourTotal, tourPP, dokdoShip, dokdoPax, dokdoFare, dokdoSub,
-          rentBase: tour==='rent' ? rentBase() : 0, rentBand: season===2?'성수기':'비수기', rentMargin: RENT_MARGIN,
+          rentBase: tour==='rent' ? rentBase() : 0, rentBand: rentBand()==='peak'?'성수기':'비수기', rentMargin: RENT_MARGIN,
           dokdoPartial: dokdo && dokdoPax !== totalPax};
 }
 
@@ -1094,6 +1107,7 @@ function dDayText(dateStr){
 function render(){
   /* 오는편 동기화: '가는편과 동일' 상태면 실제 선박명이 그대로 표시되도록 */
   if(shipInSync) $('shipIn').value = $('shipOut').value;
+  syncRentBand();
   const q = computeQuote();
 
   /* 노선 표시 */
@@ -1412,6 +1426,8 @@ function collectForm(){
     startDate: $('startDate').value,
     tourSel: $('tourSel').value,
     rentVeh: $('rentVeh').value,
+    rentBandSel: $('rentBandSel').value,
+    rentBandManual,
     shipFare: $('shipFare').value,
     fuelFare: $('fuelFare').value,
     dokdoShip: $('dokdoShip').value,
@@ -1445,6 +1461,8 @@ function applyForm(f){
   $('startDate').value = f.startDate||'';
   $('tourSel').value = f.tourSel||'bus';
   $('rentVeh').value = f.rentVeh||'ray';
+  rentBandManual = !!f.rentBandManual;
+  $('rentBandSel').value = f.rentBandSel || autoRentBand();
   loadTourPriceInput(); loadRentPriceInput();
   loadShipFareInput();
   if(f.shipFare){ $('shipFare').value = f.shipFare; reformatWonInput($('shipFare')); }
@@ -1549,7 +1567,7 @@ document.querySelectorAll('#seasonPills .pill').forEach(p=>{
     season = parseInt(p.dataset.v,10);
     seasonIsAuto = false;
     updateSeasonPills();
-    loadRentPriceInput(); /* 비수기/성수기 기준가 갱신 */
+    syncRentBand(); loadRentPriceInput(); /* 비수기/성수기 기준가 갱신 */
     render();
   });
 });
@@ -1560,7 +1578,7 @@ $('startDate').addEventListener('input', (e)=>{
     season = autoSeasonFromDate(e.target.value);
     seasonIsAuto = true;
     updateSeasonPills();
-    loadRentPriceInput(); /* 시즌 변동 시 차종 기준가 갱신 */
+    syncRentBand(); loadRentPriceInput(); /* 시즌 변동 시 차종 기준가 갱신 */
     $('f_startDate').classList.remove('error');
   }
   render();
@@ -1580,6 +1598,7 @@ $('shipOut').addEventListener('change', ()=>{ loadShipFareInput(); render(); });
 /* 투어 방법/차종 변경 → 해당 요금 로드 */
 $('tourSel').addEventListener('change', ()=>{ loadTourPriceInput(); render(); });
 $('rentVeh').addEventListener('change', ()=>{ loadRentPriceInput(); render(); });
+$('rentBandSel').addEventListener('change', ()=>{ rentBandManual = true; loadRentPriceInput(); render(); });
 
 /* 편집 가능한 요금 입력: 타이핑 중엔 그대로 두고(커서 유지), 칸을 벗어날 때만 쉼표 표시.
    값은 입력 즉시 CFG에 저장되어 계속 유지됩니다. */
@@ -1703,6 +1722,7 @@ $('resetBtn').addEventListener('click', ()=>{
   $('endDate').value='';
   $('tourSel').value='bus';
   $('rentVeh').value='ray';
+  rentBandManual=false; $('rentBandSel').value=autoRentBand();
   loadTourPriceInput(); loadRentPriceInput(); loadShipFareInput(); loadDokdoFareInput(); loadFuelFareInput();
   $('dokdoShip').value='';
   $('dokdoAmpm').value='오전';
