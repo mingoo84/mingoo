@@ -98,7 +98,9 @@ header.top p{margin:0;color:var(--on-dark-muted);font-size:13px;max-width:560px;
 }
 
 .field-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;}
-@media(max-width:420px){ .field-row{grid-template-columns:1fr;} }
+@media(max-width:420px){ .field-row:not(.four){grid-template-columns:1fr;} }
+.field-row.four{grid-template-columns:repeat(4,1fr);}
+@media(max-width:560px){ .field-row.four{grid-template-columns:1fr 1fr;} }
 .field{display:flex;flex-direction:column;gap:6px;}
 .field label{font-size:12.5px;color:var(--steel);font-weight:600;}
 .field input,.field select{
@@ -441,9 +443,9 @@ footer.note{text-align:center;color:var(--steel);font-size:12px;margin-top:26px;
         <div class="hint" id="mixHint" style="display:none;margin-bottom:12px;">가는편·오는편 선사가 달라 두 선사 왕복 요금의 평균으로 계산합니다.</div>
 
         <h3 class="sub">③ 독도 탐방</h3>
-        <div class="field-row">
+        <div class="field-row four">
           <div class="field">
-            <label for="dokdoShip">독도 탐방 선박</label>
+            <label for="dokdoShip">탐방 선박</label>
             <select id="dokdoShip">
               <option value="">미선택</option>
               <option value="썬라이즈호">썬라이즈호</option>
@@ -451,12 +453,6 @@ footer.note{text-align:center;color:var(--steel);font-size:12px;margin-top:26px;
               <option value="독도드림호">독도드림호</option>
             </select>
           </div>
-          <div class="field">
-            <label for="dokdoPax">독도 탐방 인원 <span class="badge-auto" id="dokdoPaxBadge" style="display:none;">전원</span></label>
-            <input id="dokdoPax" type="number" min="0" inputmode="numeric" disabled placeholder="-">
-          </div>
-        </div>
-        <div class="field-row">
           <div class="field">
             <label for="dokdoAmpm">시간대</label>
             <select id="dokdoAmpm" disabled>
@@ -467,6 +463,10 @@ footer.note{text-align:center;color:var(--steel);font-size:12px;margin-top:26px;
           <div class="field">
             <label for="dokdoTime">출항 시간</label>
             <input id="dokdoTime" type="time" disabled>
+          </div>
+          <div class="field">
+            <label for="dokdoPax">탐방 인원 <span class="badge-auto" id="dokdoPaxBadge" style="display:none;">전원</span></label>
+            <input id="dokdoPax" type="number" min="0" inputmode="numeric" disabled placeholder="-">
           </div>
         </div>
         <div class="hint" style="margin-bottom:14px;">선박을 고르면 독도 코스가 자동 포함되고 시간·인원을 입력할 수 있습니다 (미선택이면 비활성화). 탐방 인원이 인원 구성 합계보다 <b>적으면</b> 미참여 인원은 독도 요금이 빠지고, <b>많으면</b>(무료 유아 동반 등) 초과 인원만큼 대인 기준 독도 추가요금이 별도 항목으로 붙습니다. 독도 운항 일정은 위 선사 페이지에서 확인하세요.</div>
