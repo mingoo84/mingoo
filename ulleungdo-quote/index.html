@@ -985,15 +985,19 @@ function computeQuote(){
   TIERS.forEach(t=>{ counts[t.key] = Math.max(0, parseInt($(`cnt_${t.key}`).value,10)||0); });
   const totalPax = Object.values(counts).reduce((a,b)=>a+b,0);
 
-  /* 승선권(대인 1인) + 유류할증료(1인, 할인 없음) + 투어 */
+  /* 승선권(대인 1인) + 유류할증료(1인, 할인 없음) */
   const shipFare = Math.max(0, parseInt($('shipFare').value,10)||0);
   const fuelFare = Math.max(0, parseInt($('fuelFare').value,10)||0);
-  /* 투어 과금: pp=1인당 일괄(버스투어), total=팀 총액÷인원 */
+
+  /* 실효 인원: 인원 구성 합계와 직접 수정한 총 팀 인원 중 큰 값 (투어 인당 계산 기준) */
+  const effPax = Math.max(totalPax, teamCountManual ? (parseInt($('teamCount').value,10)||0) : 0);
+
+  /* 투어 과금: pp=1인당 일괄(버스투어) × 실효인원, total=팀 총액 (인원 무관, 별도 라인) */
   const tourMode = tour==='rent' ? 'total' : (TOUR_MODE[tour]||'total');
   const tourPrice = tourTotalPrice();
   let tourPP, tourTotal;
-  if(tourMode==='pp'){ tourPP = tourPrice; tourTotal = tourPrice * totalPax; }
-  else { tourTotal = tourPrice; tourPP = totalPax>0 ? round100(tourTotal/totalPax) : 0; }
+  if(tourMode==='pp'){ tourPP = tourPrice; tourTotal = tourPrice * effPax; }
+  else { tourTotal = tourPrice; tourPP = effPax>0 ? round100(tourTotal/effPax) : 0; }
 
   let total = 0;
   const lines = [];
@@ -1001,13 +1005,23 @@ function computeQuote(){
     const c = counts[t.key];
     const group = $(`grp_${t.key}`) ? $(`grp_${t.key}`).value : t.group;
     const base = round100(shipFare * (1 - GROUP_RATE[group]));
-    const unit = base + fuelFare + tourPP;    /* 1인당 = 승선권(등급) + 유류할증 + 투어 */
+    const unit = base + fuelFare;             /* 1인당 = 승선권(등급) + 유류할증 (투어는 별도 라인) */
     if($(`unit_${t.key}`)) $(`unit_${t.key}`).textContent = `1인 ${fmt(unit)}`;
     if(c>0){
       total += unit*c;
       lines.push({key:t.key, label:t.label, c, unit, base, sub:unit*c});
     }
   });
+
+  /* 투어비 별도 청구 라인 — 총액 투어는 인원과 무관하게 항상 전액 포함 */
+  if(totalPax>0 && tourTotal>0){
+    if(tourMode==='pp'){
+      lines.push({key:'tour', label:TOUR_LABEL[tour], c:effPax, unit:tourPP, sub:tourTotal});
+    } else {
+      lines.push({key:'tour', label:`${TOUR_LABEL[tour]}${tour==='rent'?`(${RENT_LABEL[rentVeh]||''})`:''} 팀 총액`, flat:true, c:1, unit:tourTotal, sub:tourTotal});
+    }
+    total += tourTotal;
+  }
 
   /* 독도 탐방 인원 (상한 = 총 팀 인원과 인원 합계 중 큰 값) + 1인 추가요금 */
   const dokdoShip = $('dokdoShip').value;
@@ -1032,7 +1046,7 @@ function computeQuote(){
   const cruiseNight = ships.out === 'crz';
   const dispNights = nights + (cruiseNight ? 1 : 0);
 
-  return {ships, nights, dispNights, cruiseNight, tour, rentVeh, dokdo, season, counts, totalPax, total, lines,
+  return {ships, nights, dispNights, cruiseNight, tour, rentVeh, dokdo, season, counts, totalPax, effPax, total, lines,
           lodgings, lodgeExtra, shipFare, fuelFare, tourMode, tourTotal, tourPP, dokdoShip, dokdoPax, dokdoFare, dokdoSub,
           dokdoPartial: dokdo && dokdoPax !== totalPax};
 }
@@ -1088,14 +1102,14 @@ function render(){
   $('rentRow').style.display = isRent ? 'grid' : 'none';
   $('tourPriceField').style.display = isRent ? 'none' : 'flex';
   $('tourPriceLabel').innerHTML = (q.tourMode==='pp' ? '투어 요금 (1인당)' : '투어 요금 (총액)') + ' <span class="badge-auto">수정 가능</span>';
-  if(q.totalPax<=0){
+  if(q.effPax<=0){
     $('tourPPHint').innerHTML = q.tourMode==='pp'
       ? `투어 요금이 1인당 일괄 적용됩니다.`
-      : `투어 요금은 팀 전체 총액입니다. 1인당 = 총액 ÷ 인원으로 자동 계산됩니다.`;
+      : `투어 요금은 팀 전체 총액입니다. 인원과 무관하게 총액이 그대로 청구되고, 1인당 환산은 참고용으로 표시됩니다.`;
   } else if(q.tourMode==='pp'){
-    $('tourPPHint').innerHTML = `${TOUR_LABEL[q.tour]} <b>1인당 ${fmt(q.tourPP)}</b> × ${q.totalPax}명 = 총액 <b>${fmt(q.tourTotal)}</b>`;
+    $('tourPPHint').innerHTML = `${TOUR_LABEL[q.tour]} <b>1인당 ${fmt(q.tourPP)}</b> × ${q.effPax}명 = 총액 <b>${fmt(q.tourTotal)}</b>`;
   } else {
-    $('tourPPHint').innerHTML = `${TOUR_LABEL[q.tour]}${isRent?` · ${RENT_LABEL[q.rentVeh]||''}`:''} 총액 <b>${fmt(q.tourTotal)}</b> ÷ ${q.totalPax}명 = <b>1인당 ${fmt(q.tourPP)}</b>`;
+    $('tourPPHint').innerHTML = `${TOUR_LABEL[q.tour]}${isRent?` · ${RENT_LABEL[q.rentVeh]||''}`:''} 총액 <b>${fmt(q.tourTotal)}</b> (인원 무관 고정) ÷ ${q.effPax}명 = 1인당 환산 <b>${fmt(q.tourPP)}</b>`;
   }
 
   /* 독도 컨트롤: 선박 미선택이면 시간대·시간·인원·요금 비활성화 */
@@ -1147,7 +1161,9 @@ function render(){
   bd.innerHTML = '';
   q.lines.forEach(l=>{
     const row = document.createElement('div');
-    row.innerHTML = `<span>${l.label} ${l.c}명 × ${fmt(l.unit)}</span><span>${fmt(l.sub)}</span>`;
+    row.innerHTML = l.flat
+      ? `<span>${l.label}</span><span>${fmt(l.sub)}</span>`
+      : `<span>${l.label} ${l.c}명 × ${fmt(l.unit)}</span><span>${fmt(l.sub)}</span>`;
     bd.appendChild(row);
   });
   if(q.lodgeExtra>0){
@@ -1290,14 +1306,14 @@ function generateQuote(fromSticky){
   const teamPax = teamCountManual ? (parseInt($('teamCount').value,10) || q.totalPax) : q.totalPax;
   const seasonWord = SEASON_LABEL[q.season];
 
-  /* 등급별 1인당 × 인원 = 소계 라인 (독도 추가는 lines에 포함) */
-  const paxLines = q.lines.map(l=>`   - ${l.label} ${l.c}명 × 1인 ${fmt(l.unit)} = ${fmt(l.sub)}`);
+  /* 라인별: 등급(승선권+유류할증) · 투어 · 독도 = lines에 모두 포함 */
+  const paxLines = q.lines.map(l=> l.flat
+    ? `   - ${l.label} = ${fmt(l.sub)}`
+    : `   - ${l.label} ${l.c}명 × 1인 ${fmt(l.unit)} = ${fmt(l.sub)}`);
   if(q.lodgeExtra>0) paxLines.push(`   - 숙소 추가요금 = ${fmt(q.lodgeExtra)}`);
   const tourName = TOUR_LABEL[q.tour] + (q.tour==='rent' ? `(${RENT_LABEL[q.rentVeh]||''})` : '');
-  const tourNote = q.tourMode==='pp'
-    ? `   * 투어: ${tourName} 1인당 ${fmt(q.tourPP)} × ${q.totalPax}명 = ${fmt(q.tourTotal)} (승선권에 합산 반영)`
-    : `   * 투어: ${tourName} 총액 ${fmt(q.tourTotal)} (1인당 ${fmt(q.tourPP)}, 승선권에 합산 반영)`;
-  paxLines.push(tourNote);
+  if(q.tourMode!=='pp' && q.tourTotal>0 && q.effPax>0)
+    paxLines.push(`   * ${tourName} 1인당 환산 약 ${fmt(q.tourPP)} (${q.effPax}명 기준)`);
   if(q.fuelFare>0) paxLines.push(`   * 유류할증료 1인 ${fmt(q.fuelFare)} 포함`);
 
   const dokdoTime = dokdoTimeStr();
@@ -1336,11 +1352,11 @@ ${rowsToTabText(rows)}
   $('d_cust').textContent = custName+'님';
   $('d_staff').textContent = staffName || '굿투어';
   $('d_tel').textContent = staffTel || '-';
-  const paxHtml = q.lines.map(l=>`   - ${l.label} ${l.c}명 × 1인 ${fmt(l.unit)} = <b>${fmt(l.sub)}</b>`).join('\n')
+  const paxHtml = q.lines.map(l=> l.flat
+      ? `   - ${l.label} = <b>${fmt(l.sub)}</b>`
+      : `   - ${l.label} ${l.c}명 × 1인 ${fmt(l.unit)} = <b>${fmt(l.sub)}</b>`).join('\n')
     + (q.lodgeExtra>0 ? `\n   - 숙소 추가요금 = <b>${fmt(q.lodgeExtra)}</b>` : '')
-    + (q.tourMode==='pp'
-        ? `\n   * 투어: ${esc(tourName)} 1인당 ${fmt(q.tourPP)} × ${q.totalPax}명 = ${fmt(q.tourTotal)}`
-        : `\n   * 투어: ${esc(tourName)} 총액 ${fmt(q.tourTotal)} (1인당 ${fmt(q.tourPP)})`)
+    + (q.tourMode!=='pp' && q.tourTotal>0 && q.effPax>0 ? `\n   * ${esc(tourName)} 1인당 환산 약 ${fmt(q.tourPP)} (${q.effPax}명 기준)` : '')
     + (q.fuelFare>0 ? `\n   * 유류할증료 1인 ${fmt(q.fuelFare)} 포함` : '');
   $('d_summary').innerHTML =
     `<b>1. 건   명</b> : ${esc(custName)}님 ${teamPax}인팀 ${shipText(q.ships)} ${tourFull}${q.dokdo?'+독도':''}\n`+
