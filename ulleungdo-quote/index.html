@@ -941,8 +941,9 @@ function addLodgeRow(data){
      <button type="button" class="del" aria-label="숙소 삭제">×</button>`;
   row.querySelector('.del').addEventListener('click', ()=>{ row.remove(); render(); });
   row.querySelectorAll('select,input').forEach(el=>{
-    el.addEventListener('input', ()=>{ if(el.classList.contains('l-price')) reformatWonInput(el); render(); });
+    el.addEventListener('input', render);
     el.addEventListener('change', render);
+    if(el.classList.contains('l-price')) el.addEventListener('blur', ()=>reformatWonInput(el));
   });
   list.appendChild(row);
 }
@@ -1565,12 +1566,18 @@ $('shipOut').addEventListener('change', ()=>{ loadShipFareInput(); render(); });
 $('tourSel').addEventListener('change', ()=>{ loadTourPriceInput(); render(); });
 $('rentVeh').addEventListener('change', ()=>{ loadRentPriceInput(); render(); });
 
-/* 편집 가능한 요금 입력 → 쉼표 자동 표시 + CFG에 저장(다음에도 유지) */
-$('tourPrice').addEventListener('input', ()=>{ reformatWonInput($('tourPrice')); CFG.tour[$('tourSel').value] = parseWonVal($('tourPrice').value); savePriceCfg(); render(); });
-$('rentPrice').addEventListener('input', ()=>{ reformatWonInput($('rentPrice')); CFG.rent[$('rentVeh').value] = parseWonVal($('rentPrice').value); savePriceCfg(); render(); });
-$('shipFare').addEventListener('input', ()=>{ reformatWonInput($('shipFare')); CFG.ship[$('shipOut').value] = parseWonVal($('shipFare').value); savePriceCfg(); render(); });
-$('fuelFare').addEventListener('input', ()=>{ reformatWonInput($('fuelFare')); CFG.fuel = parseWonVal($('fuelFare').value); savePriceCfg(); render(); });
-$('dokdoFare').addEventListener('input', ()=>{ reformatWonInput($('dokdoFare')); CFG.dokdo = parseWonVal($('dokdoFare').value); savePriceCfg(); render(); });
+/* 편집 가능한 요금 입력: 타이핑 중엔 그대로 두고(커서 유지), 칸을 벗어날 때만 쉼표 표시.
+   값은 입력 즉시 CFG에 저장되어 계속 유지됩니다. */
+function bindWonInput(id, setter){
+  const el = $(id);
+  el.addEventListener('input', ()=>{ setter(parseWonVal(el.value)); savePriceCfg(); render(); });
+  el.addEventListener('blur', ()=>{ reformatWonInput(el); });
+}
+bindWonInput('tourPrice', v=>{ CFG.tour[$('tourSel').value] = v; });
+bindWonInput('rentPrice', v=>{ CFG.rent[$('rentVeh').value] = v; });
+bindWonInput('shipFare',  v=>{ CFG.ship[$('shipOut').value] = v; });
+bindWonInput('fuelFare',  v=>{ CFG.fuel = v; });
+bindWonInput('dokdoFare', v=>{ CFG.dokdo = v; });
 
 /* 오는편: '가는편과 동일'을 고르거나 가는편과 같은 선박을 고르면 동기화 모드 */
 $('shipIn').addEventListener('change', ()=>{
