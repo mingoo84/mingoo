@@ -445,7 +445,14 @@ footer.note{text-align:center;color:var(--steel);font-size:12px;margin-top:26px;
             </select>
           </div>
         </div>
-        <div class="hint" id="mixHint" style="display:none;margin-bottom:12px;">가는편·오는편 선사가 달라 두 선사 왕복 요금의 평균으로 계산합니다.</div>
+        <div class="hint" id="mixHint" style="display:none;margin-bottom:12px;">가는편·오는편 선사가 달라 왕복 승선권을 함께 표기합니다.</div>
+        <div class="field-row" style="grid-template-columns:1fr;">
+          <div class="field">
+            <label for="shipFare">왕복 승선권 (대인 1인) <span class="badge-auto">수정 가능</span></label>
+            <input id="shipFare" type="number" min="0" step="1000" inputmode="numeric">
+            <span class="hint" style="margin-top:2px;">선사 기본값이 자동 입력됩니다. 등급별 할인(소인 50% 등)은 이 금액 기준으로 자동 적용됩니다.</span>
+          </div>
+        </div>
 
         <h3 class="sub">③ 독도 탐방</h3>
         <div class="field-row four">
@@ -478,7 +485,13 @@ footer.note{text-align:center;color:var(--steel);font-size:12px;margin-top:26px;
             <input id="dokdoPax" type="number" min="0" inputmode="numeric" disabled placeholder="-">
           </div>
         </div>
-        <div class="hint" style="margin-bottom:14px;">선박을 고르면 독도 코스가 자동 포함되고 시간·인원을 입력할 수 있습니다 (미선택이면 비활성화). 탐방 인원이 인원 구성 합계보다 <b>적으면</b> 미참여 인원은 독도 요금이 빠지고, <b>많으면</b>(무료 유아 동반 등) 초과 인원만큼 대인 기준 독도 추가요금이 별도 항목으로 붙습니다. 독도 운항 일정은 위 선사 페이지에서 확인하세요.</div>
+        <div class="field-row" style="grid-template-columns:1fr;">
+          <div class="field">
+            <label for="dokdoFare">독도 1인 추가요금 <span class="badge-auto">수정 가능</span></label>
+            <input id="dokdoFare" type="number" min="0" step="1000" inputmode="numeric" disabled>
+          </div>
+        </div>
+        <div class="hint" style="margin-bottom:14px;">선박을 고르면 독도 코스가 포함되고 시간·인원·요금을 입력할 수 있습니다 (미선택이면 비활성화). 독도 추가요금은 <b>탐방 인원 × 1인 추가요금</b>으로 별도 항목 계산됩니다. 독도 운항 일정은 위 선사 페이지에서 확인하세요.</div>
 
         <h3 class="sub">④ 일자 · 시즌</h3>
         <div class="field-row">
@@ -518,21 +531,24 @@ footer.note{text-align:center;color:var(--steel);font-size:12px;margin-top:26px;
         <div class="field-row">
           <div class="field">
             <label for="tourSel">투어 방법</label>
-            <select id="tourSel">
-              <option value="bus">버스투어</option>
-              <option value="taxi">택시투어</option>
-              <option value="combi">콤비투어 (버스+택시)</option>
-              <option value="rent">렌트카투어</option>
-            </select>
+            <select id="tourSel"></select>
           </div>
-          <div class="field" style="justify-content:flex-end;">
-            <div class="checkline" id="snorkelWrap" style="display:none;margin-top:0;">
-              <input type="checkbox" id="snorkelChk">
-              <label for="snorkelChk">스노클링 추가 (+20,000원/인)</label>
-            </div>
+          <div class="field" id="tourPriceField">
+            <label for="tourPrice">투어 요금 (총액) <span class="badge-auto">수정 가능</span></label>
+            <input id="tourPrice" type="number" min="0" step="1000" inputmode="numeric">
           </div>
         </div>
-        <div class="hint" id="tourHint" style="display:none;">콤비투어는 버스투어·택시투어 요금의 평균으로 계산합니다.</div>
+        <div class="field-row" id="rentRow" style="display:none;">
+          <div class="field">
+            <label for="rentVeh">자유렌트 차종</label>
+            <select id="rentVeh"></select>
+          </div>
+          <div class="field">
+            <label for="rentPrice">차종 요금 (총액) <span class="badge-auto">수정 가능</span></label>
+            <input id="rentPrice" type="number" min="0" step="1000" inputmode="numeric">
+          </div>
+        </div>
+        <div class="hint" id="tourPPHint">투어 요금은 팀 전체 총액입니다. 1인당 = 총액 ÷ 인원으로 자동 계산되어 견적에 반영됩니다.</div>
       </div>
 
       <div class="card">
@@ -683,13 +699,17 @@ muk:{1:{adult:{md:[317000,352000,394800,359000,394000,436800],taxi:[404000,43900
 };
 const SHIP_LABEL = {crz:'포항크루즈 (울릉크루즈)', poh:'포항쾌속 (대저해운)', muk:'묵호 (씨스포빌)'};
 const shortShip = k => SHIP_LABEL[k].split(' (')[0];
-const TOUR_LABEL = {bus:'버스투어', taxi:'택시투어', combi:'콤비투어(버스+택시)', rent:'렌트카투어'};
+/* 투어 방법 7종 (자유렌트는 차종별) */
+const TOUR_ORDER = ['bus','taxi','starex','combi','bus25','bus35','rent'];
+const TOUR_LABEL = {bus:'버스투어', taxi:'택시투어', starex:'스타렉스투어', combi:'단독콤비투어', bus25:'단독25인승', bus35:'단독35인승', rent:'자유렌트'};
+const RENT_ORDER = ['small','sedan','suv','starex'];
+const RENT_LABEL = {small:'소형', sedan:'승용', suv:'SUV', starex:'스타렉스'};
 const SEASON_LABEL = ['주중','주말','성수기'];
 const STAFF_TEL = {'서민구 팀장':'010-3361-4142','이재훈 팀장':'010-3361-4142'};
 const DEPOSIT_PER_PERSON = 100000;
 const PEAK_RANGES = [ {from:'07-15', to:'08-20'} ]; /* 성수기 자동 추천 기간(월-일) */
 
-/* 요금 등급 정의 — group은 가격 원장의 할인군 매핑 (행별 드롭다운으로 변경 가능) */
+/* 요금 등급 정의 — group은 승선권 할인군 (행별 드롭다운으로 변경 가능) */
 const TIERS = [
   {key:'adult',   label:'대인',       group:'adult', def:1},
   {key:'senior',  label:'경로',       group:'d20',   def:0},
@@ -700,16 +720,44 @@ const TIERS = [
   {key:'vet',     label:'보훈대상자', group:'d20',   def:0},
 ];
 const GROUP_LABEL = {adult:'할인 없음', d10:'10% 할인', d20:'20% 할인', d50:'50% 할인'};
+const GROUP_RATE  = {adult:0, d10:0.10, d20:0.20, d50:0.50};
 const LODGE_TYPES = ['모텔','호텔','리조트','펜션'];
 
-const DRAFT_KEY = 'gt_quote_draft_v4';
-const HIST_KEY  = 'gt_quote_hist_v4';
+/* ---- 편집 가능한 기본 요금(고정값이되 화면에서 수정 가능, localStorage에 별도 저장) ---- */
+const DEFAULT_SHIP_FARE  = {crz:190000, poh:175000, muk:160000}; /* 대인 왕복 승선권(1인) */
+const DEFAULT_TOUR_PRICE = {bus:300000, taxi:300000, starex:350000, combi:400000, bus25:500000, bus35:600000, rent:0}; /* 투어 총액(단독/전세 1팀 기준) */
+const DEFAULT_RENT_PRICE = {small:90000, sedan:110000, suv:150000, starex:200000}; /* 자유렌트 차종별 총액 */
+const DEFAULT_DOKDO_FARE = 55000; /* 독도 1인 추가요금 */
+
+const DRAFT_KEY = 'gt_quote_draft_v5';
+const HIST_KEY  = 'gt_quote_hist_v5';
+const PRICE_KEY = 'gt_price_cfg_v5';
 
 let season = 0;
 let seasonIsAuto = true;
 let teamCountManual = false;
 let dokdoPaxManual = false; // 독도 탐방 인원을 직접 수정했는지 (false면 전체 인원 자동)
 let shipInSync = true;      // 오는편이 가는편을 따라가는 상태인지
+
+/* 편집 가능한 요금 설정 (localStorage에 별도 저장 — 입력 초기화해도 유지) */
+let CFG = loadPriceCfg();
+function loadPriceCfg(){
+  const base = {
+    ship: {...DEFAULT_SHIP_FARE},
+    tour: {...DEFAULT_TOUR_PRICE},
+    rent: {...DEFAULT_RENT_PRICE},
+    dokdo: DEFAULT_DOKDO_FARE,
+  };
+  try{
+    const raw = JSON.parse(localStorage.getItem(PRICE_KEY)||'{}');
+    if(raw.ship) Object.assign(base.ship, raw.ship);
+    if(raw.tour) Object.assign(base.tour, raw.tour);
+    if(raw.rent) Object.assign(base.rent, raw.rent);
+    if(typeof raw.dokdo==='number') base.dokdo = raw.dokdo;
+  }catch(e){}
+  return base;
+}
+function savePriceCfg(){ try{ localStorage.setItem(PRICE_KEY, JSON.stringify(CFG)); }catch(e){} }
 
 /* ============================================================
    유틸
@@ -751,6 +799,15 @@ function fillTimeSelects(){
   for(let m=0; m<60; m+=5) mo += `<option value="${String(m).padStart(2,'0')}">${String(m).padStart(2,'0')}</option>`;
   minSel.innerHTML = mo;
 }
+/* 투어/차종 셀렉트 채우기 + 편집 가능한 요금 입력칸 로더 */
+function fillTourSelects(){
+  $('tourSel').innerHTML = TOUR_ORDER.map(k=>`<option value="${k}">${TOUR_LABEL[k]}</option>`).join('');
+  $('rentVeh').innerHTML = RENT_ORDER.map(k=>`<option value="${k}">${RENT_LABEL[k]}</option>`).join('');
+}
+function loadTourPriceInput(){ $('tourPrice').value = CFG.tour[$('tourSel').value] ?? 0; }
+function loadRentPriceInput(){ $('rentPrice').value = CFG.rent[$('rentVeh').value] ?? 0; }
+function loadShipFareInput(){ $('shipFare').value = CFG.ship[$('shipOut').value] ?? 0; }
+function loadDokdoFareInput(){ $('dokdoFare').value = CFG.dokdo ?? 0; }
 function numToKorean(num){
   if(num===0) return '영원';
   const digits=['','일','이','삼','사','오','육','칠','팔','구'];
@@ -896,79 +953,73 @@ function getShips(){
   if(shipInSync || v==='same') v = out;
   return { out, in: v, mixed: v!==out };
 }
-/* 한 선사 기준 1인 요금 (원장 그대로, 콤비=버스·택시 평균, 렌트+스노클링=rents 열) */
-function shipUnitRaw(ship, nights, group, tour, snorkel, col){
-  const t = PRICES[ship][nights][group];
-  if(tour==='combi') return (t.md[col] + t.taxi[col]) / 2;
-  if(tour==='rent')  return snorkel ? t.rents[col] : t.rent[col];
-  if(tour==='bus')   return t.md[col];
-  return t.taxi[col];
+/* 선택된 투어의 총액 (자유렌트는 선택 차종 요금) */
+function tourTotalPrice(){
+  const tour = $('tourSel').value;
+  if(tour==='rent'){
+    const veh = $('rentVeh').value || RENT_ORDER[0];
+    return Math.max(0, parseInt(CFG.rent[veh],10)||0);
+  }
+  return Math.max(0, parseInt(CFG.tour[tour],10)||0);
 }
+/* ---- 완전 수동 모델: 총액 = 승선권(등급별) + 투어(총액÷인원) + 숙소 + 독도 ---- */
 function computeQuote(){
   const ships = getShips();
   const nights = parseInt($('daySel').value,10);
   const tour = $('tourSel').value;
+  const rentVeh = $('rentVeh').value;
   const dokdo = !!$('dokdoShip').value;
-  const snorkel = tour==='rent' && $('snorkelChk').checked;
 
-  /* 인원 집계 먼저 */
+  /* 인원 집계 */
   const counts = {};
   TIERS.forEach(t=>{ counts[t.key] = Math.max(0, parseInt($(`cnt_${t.key}`).value,10)||0); });
   const totalPax = Object.values(counts).reduce((a,b)=>a+b,0);
 
-  /* 독도 탐방 인원: 상한은 총 팀 인원(직접 수정 시)과 인원 구성 합계 중 큰 값 */
-  const dokdoShip = $('dokdoShip').value;
-  const teamPaxCap = Math.max(totalPax, teamCountManual ? (parseInt($('teamCount').value,10)||0) : 0);
-  let dokdoPax = totalPax;
-  if(dokdo && dokdoShip && dokdoPaxManual){
-    const dp = parseInt($('dokdoPax').value,10);
-    if(!isNaN(dp)) dokdoPax = Math.max(0, Math.min(dp, teamPaxCap));
-  }
-  const dokdoPartial = dokdo && dokdoPax !== totalPax;
-
-  /* 요금제 인원 전원이 참여하면 원장 독도 열 그대로, 미만이면 기본가 + 참여자 추가요금 */
-  const col = season + (dokdo && dokdoPax >= totalPax ? 3 : 0);
+  /* 승선권(대인 1인) + 투어 1인당(총액÷인원) */
+  const shipFare = Math.max(0, parseInt($('shipFare').value,10)||0);
+  const tourTotal = tourTotalPrice();
+  const tourPP = totalPax>0 ? round100(tourTotal/totalPax) : 0;
 
   let total = 0;
   const lines = [];
   TIERS.forEach(t=>{
     const c = counts[t.key];
     const group = $(`grp_${t.key}`) ? $(`grp_${t.key}`).value : t.group;
-    const raw = (shipUnitRaw(ships.out, nights, group, tour, snorkel, col)
-               + shipUnitRaw(ships.in,  nights, group, tour, snorkel, col)) / 2;
-    const unit = round100(raw);
+    const base = round100(shipFare * (1 - GROUP_RATE[group]));
+    const unit = base + tourPP;               /* 1인당 = 승선권(등급) + 투어 */
     if($(`unit_${t.key}`)) $(`unit_${t.key}`).textContent = `1인 ${fmt(unit)}`;
     if(c>0){
       total += unit*c;
-      lines.push({key:t.key, label:t.label, c, unit, sub:unit*c});
+      lines.push({key:t.key, label:t.label, c, unit, base, sub:unit*c});
     }
   });
 
-  /* 부분/초과 참여: 대인 기준 독도 추가요금 (가는편·오는편 평균)
-     - 참여 인원 < 인원 구성 합계 → 전원 기본가 + 참여자 × 추가요금
-     - 참여 인원 > 인원 구성 합계 → 전원 독도가 + 초과분(무료동반 등) × 추가요금 */
-  let dokdoUnit = 0;
-  const extraCnt = !dokdo ? 0 : (dokdoPax < totalPax ? dokdoPax : dokdoPax - totalPax);
-  if(extraCnt > 0){
-    const surchOut = shipUnitRaw(ships.out, nights, 'adult', tour, snorkel, season+3)
-                   - shipUnitRaw(ships.out, nights, 'adult', tour, snorkel, season);
-    const surchIn  = shipUnitRaw(ships.in,  nights, 'adult', tour, snorkel, season+3)
-                   - shipUnitRaw(ships.in,  nights, 'adult', tour, snorkel, season);
-    dokdoUnit = round100((surchOut + surchIn) / 2);
-    total += dokdoUnit * extraCnt;
-    lines.push({key:'dokdo', label:'독도 탐방 추가', c:extraCnt, unit:dokdoUnit, sub:dokdoUnit*extraCnt});
+  /* 독도 탐방 인원 (상한 = 총 팀 인원과 인원 합계 중 큰 값) + 1인 추가요금 */
+  const dokdoShip = $('dokdoShip').value;
+  const teamPaxCap = Math.max(totalPax, teamCountManual ? (parseInt($('teamCount').value,10)||0) : 0);
+  let dokdoPax = totalPax;
+  if(dokdo && dokdoPaxManual){
+    const dp = parseInt($('dokdoPax').value,10);
+    if(!isNaN(dp)) dokdoPax = Math.max(0, Math.min(dp, teamPaxCap));
+  }
+  const dokdoFare = dokdo ? Math.max(0, parseInt(CFG.dokdo,10)||0) : 0;
+  const dokdoSub = dokdo ? dokdoFare * dokdoPax : 0;
+  if(dokdoSub > 0){
+    total += dokdoSub;
+    lines.push({key:'dokdo', label:'독도 탐방 추가', c:dokdoPax, unit:dokdoFare, sub:dokdoSub});
   }
 
   const lodgings = getLodgings();
   const lodgeExtra = lodgings.reduce((s,l)=>s+l.price, 0);
   total += lodgeExtra;
 
-  /* 크루즈 전날 밤 출항 → 표기 박수 +1 (요금은 원장 nights 기준 그대로) */
+  /* 크루즈 전날 밤 출항 → 표기 박수 +1 */
   const cruiseNight = ships.out === 'crz';
   const dispNights = nights + (cruiseNight ? 1 : 0);
 
-  return {ships, nights, dispNights, cruiseNight, tour, dokdo, snorkel, season, counts, totalPax, total, lines, lodgings, lodgeExtra,
-          dokdoShip, dokdoPax, dokdoPartial, dokdoUnit};
+  return {ships, nights, dispNights, cruiseNight, tour, rentVeh, dokdo, season, counts, totalPax, total, lines,
+          lodgings, lodgeExtra, shipFare, tourTotal, tourPP, dokdoShip, dokdoPax, dokdoFare, dokdoSub,
+          dokdoPartial: dokdo && dokdoPax !== totalPax};
 }
 
 /* ============================================================
@@ -1016,15 +1067,22 @@ function render(){
   $('mixHint').style.display = q.ships.mixed ? 'block' : 'none';
   $('cruiseHint').style.display = q.cruiseNight ? 'block' : 'none';
   $('shipInBadge').style.display = shipInSync ? 'inline-block' : 'none';
-  $('snorkelWrap').style.display = $('tourSel').value==='rent' ? 'flex' : 'none';
-  $('tourHint').style.display = $('tourSel').value==='combi' ? 'block' : 'none';
 
-  /* 독도 컨트롤: 선박 미선택이면 시간대·시간·인원 비활성화 */
+  /* 투어: 자유렌트면 차종 행 표시, 투어요금 입력칸 숨김 */
+  const isRent = q.tour==='rent';
+  $('rentRow').style.display = isRent ? 'grid' : 'none';
+  $('tourPriceField').style.display = isRent ? 'none' : 'flex';
+  $('tourPPHint').innerHTML = q.totalPax>0
+    ? `${TOUR_LABEL[q.tour]}${isRent?` · ${RENT_LABEL[q.rentVeh]||''}`:''} 총액 <b>${fmt(q.tourTotal)}</b> ÷ ${q.totalPax}명 = <b>1인당 ${fmt(q.tourPP)}</b>`
+    : `투어 요금은 팀 전체 총액입니다. 1인당 = 총액 ÷ 인원으로 자동 계산됩니다.`;
+
+  /* 독도 컨트롤: 선박 미선택이면 시간대·시간·인원·요금 비활성화 */
   const dokdoOn = !!q.dokdoShip;
   $('dokdoAmpm').disabled = !dokdoOn;
   $('dokdoHour').disabled = !dokdoOn;
   $('dokdoMin').disabled = !dokdoOn;
   $('dokdoPax').disabled = !dokdoOn;
+  $('dokdoFare').disabled = !dokdoOn;
   if(dokdoOn){
     if(!dokdoPaxManual) $('dokdoPax').value = q.totalPax;
     $('dokdoPaxBadge').style.display = 'inline-block';
@@ -1033,7 +1091,7 @@ function render(){
     $('dokdoPax').value = '';
     $('dokdoPaxBadge').style.display = 'none';
   }
-  ['dokdoPax','dokdoAmpm','dokdoHour'].forEach(id=>{
+  ['dokdoPax','dokdoAmpm','dokdoHour','dokdoFare'].forEach(id=>{
     const lab = document.querySelector(`label[for="${id}"]`);
     if(lab) lab.classList.toggle('dim', !dokdoOn);
   });
@@ -1045,8 +1103,7 @@ function render(){
   $('ticketDate').innerHTML = start ? `${fmtDate(start)}${dday?`<span class="dday">${dday}</span>`:''}` : '-';
   $('ticketPax').textContent = q.totalPax+'명';
   $('ticketSeason').textContent = SEASON_LABEL[q.season]
-    + (q.dokdo? (q.dokdoPartial? ` · 독도(${q.dokdoPax}명)` : ' · 독도') : '')
-    + (q.snorkel? ' · 스노클링':'');
+    + (q.dokdo? (q.dokdoPartial? ` · 독도(${q.dokdoPax}명)` : ' · 독도') : '');
   $('totalAmount').textContent = fmt(q.total);
   $('totalAmountKr').textContent = q.total>0 ? numToKorean(q.total)+'정' : '';
   $('stickyAmt').textContent = fmt(q.total);
@@ -1086,8 +1143,8 @@ function render(){
 /* ============================================================
    일정표
    ============================================================ */
-function buildItineraryRows(nights, tour, dokdo, snorkel, dk, cruiseNight){
-  const tourWord = {bus:'버스투어', taxi:'택시투어', combi:'콤비투어', rent:'렌터카'}[tour] || '투어';
+function buildItineraryRows(nights, tour, dokdo, dk, cruiseNight){
+  const tourWord = {bus:'버스투어', taxi:'택시투어', starex:'스타렉스투어', combi:'단독콤비투어', bus25:'단독25인승 투어', bus35:'단독35인승 투어', rent:'자유렌트'}[tour] || '투어';
   const rows = [];
   if(cruiseNight){
     /* 크루즈: 전날 밤 포항 출항 → 선상 1박 → 익일 새벽 울릉도 도착 */
@@ -1113,9 +1170,6 @@ function buildItineraryRows(nights, tour, dokdo, snorkel, dk, cruiseNight){
     rows.push(['2일차', (dk&&dk.time)||'', '◆ 우리땅 독도 탐방'+detail, '기상에 따라 변경']);
   } else if(nights===2){
     rows.push(['2일차','','◆ 선택관광 or 자유일정','']);
-  }
-  if(snorkel){
-    rows.push(['2일차','','◆ 울릉도 바다 스노클링 체험','기상에 따라 변경']);
   }
   rows.push(['2일차','','중식','']);
   rows.push(['2일차','오후','◆ 울릉도 트래킹 '+tourWord+' B','']);
@@ -1214,15 +1268,17 @@ function generateQuote(fromSticky){
   const teamPax = teamCountManual ? (parseInt($('teamCount').value,10) || q.totalPax) : q.totalPax;
   const seasonWord = SEASON_LABEL[q.season];
 
-  /* 등급별 1인당 × 인원 = 소계 라인 */
+  /* 등급별 1인당 × 인원 = 소계 라인 (독도 추가는 lines에 포함) */
   const paxLines = q.lines.map(l=>`   - ${l.label} ${l.c}명 × 1인 ${fmt(l.unit)} = ${fmt(l.sub)}`);
   if(q.lodgeExtra>0) paxLines.push(`   - 숙소 추가요금 = ${fmt(q.lodgeExtra)}`);
+  const tourName = TOUR_LABEL[q.tour] + (q.tour==='rent' ? `(${RENT_LABEL[q.rentVeh]||''})` : '');
+  paxLines.push(`   * 투어: ${tourName} 총액 ${fmt(q.tourTotal)} (1인당 ${fmt(q.tourPP)}, 승선권에 합산 반영)`);
 
   const dokdoTime = dokdoTimeStr();
   const dokdoAmpm = $('dokdoAmpm').value;
   const dk = {ship: q.dokdoShip, ampm: dokdoAmpm, time: dokdoTime};
-  const rows = buildItineraryRows(q.nights, q.tour, q.dokdo, q.snorkel, dk, q.cruiseNight);
-  const tourFull = TOUR_LABEL[q.tour] + (q.snorkel?'+스노클링':'');
+  const rows = buildItineraryRows(q.nights, q.tour, q.dokdo, dk, q.cruiseNight);
+  const tourFull = tourName;
   const bits = [];
   if(q.dokdoShip) bits.push(q.dokdoShip);
   if(dokdoTime) bits.push(`${dokdoAmpm} ${dokdoTime} 출항`);
@@ -1255,7 +1311,8 @@ ${rowsToTabText(rows)}
   $('d_staff').textContent = staffName || '굿투어';
   $('d_tel').textContent = staffTel || '-';
   const paxHtml = q.lines.map(l=>`   - ${l.label} ${l.c}명 × 1인 ${fmt(l.unit)} = <b>${fmt(l.sub)}</b>`).join('\n')
-    + (q.lodgeExtra>0 ? `\n   - 숙소 추가요금 = <b>${fmt(q.lodgeExtra)}</b>` : '');
+    + (q.lodgeExtra>0 ? `\n   - 숙소 추가요금 = <b>${fmt(q.lodgeExtra)}</b>` : '')
+    + `\n   * 투어: ${esc(tourName)} 총액 ${fmt(q.tourTotal)} (1인당 ${fmt(q.tourPP)})`;
   $('d_summary').innerHTML =
     `<b>1. 건   명</b> : ${esc(custName)}님 ${teamPax}인팀 ${shipText(q.ships)} ${tourFull}${q.dokdo?'+독도':''}\n`+
     `<b>2. 기   간</b> : ${fmtDate(startDate)} ~ ${fmtDate(endDate)}  (${packLabel(q.dispNights)} · ${seasonWord}${q.cruiseNight?' · 크루즈 전야출항':''})\n`+
@@ -1291,13 +1348,14 @@ function collectForm(){
     daySel: $('daySel').value,
     startDate: $('startDate').value,
     tourSel: $('tourSel').value,
+    rentVeh: $('rentVeh').value,
+    shipFare: $('shipFare').value,
     dokdoShip: $('dokdoShip').value,
     dokdoAmpm: $('dokdoAmpm').value,
     dokdoHour: $('dokdoHour').value,
     dokdoMin: $('dokdoMin').value,
     dokdoPax: $('dokdoPax').value,
     dokdoPaxManual,
-    snorkel: $('snorkelChk').checked,
     lodgings: getLodgings(),
     teamCount: $('teamCount').value,
     teamCountManual,
@@ -1322,13 +1380,17 @@ function applyForm(f){
   $('daySel').value = f.daySel||'1';
   $('startDate').value = f.startDate||'';
   $('tourSel').value = f.tourSel||'bus';
-  $('dokdoShip').value = f.dokdoShip||(f.dokdo?'썬라이즈호':'');
+  $('rentVeh').value = f.rentVeh||'small';
+  loadTourPriceInput(); loadRentPriceInput();
+  loadShipFareInput();
+  if(f.shipFare) $('shipFare').value = f.shipFare;
+  loadDokdoFareInput();
+  $('dokdoShip').value = f.dokdoShip||'';
   $('dokdoAmpm').value = f.dokdoAmpm||'오전';
   $('dokdoHour').value = f.dokdoHour||'';
   $('dokdoMin').value = f.dokdoMin||'';
   dokdoPaxManual = !!f.dokdoPaxManual;
   if(dokdoPaxManual && f.dokdoPax) $('dokdoPax').value = f.dokdoPax;
-  $('snorkelChk').checked = !!f.snorkel;
   setLodgings(f.lodgings);
   TIERS.forEach(t=>{
     $(`cnt_${t.key}`).value = (f.counts&&f.counts[t.key])??t.def;
@@ -1441,10 +1503,21 @@ $('staffName').addEventListener('change', ()=>{
   render();
 });
 
-['shipOut','tourSel','snorkelChk','custName'].forEach(id=>{
-  $(id).addEventListener('input', render);
-  $(id).addEventListener('change', render);
-});
+$('custName').addEventListener('input', render);
+$('custName').addEventListener('change', render);
+
+/* 가는편 변경 → 해당 선박 승선권 기본값 로드 */
+$('shipOut').addEventListener('change', ()=>{ loadShipFareInput(); render(); });
+
+/* 투어 방법/차종 변경 → 해당 요금 로드 */
+$('tourSel').addEventListener('change', ()=>{ loadTourPriceInput(); render(); });
+$('rentVeh').addEventListener('change', ()=>{ loadRentPriceInput(); render(); });
+
+/* 편집 가능한 요금 입력 → CFG에 저장(다음에도 유지) */
+$('tourPrice').addEventListener('input', ()=>{ CFG.tour[$('tourSel').value] = Math.max(0,parseInt($('tourPrice').value,10)||0); savePriceCfg(); render(); });
+$('rentPrice').addEventListener('input', ()=>{ CFG.rent[$('rentVeh').value] = Math.max(0,parseInt($('rentPrice').value,10)||0); savePriceCfg(); render(); });
+$('shipFare').addEventListener('input', ()=>{ CFG.ship[$('shipOut').value] = Math.max(0,parseInt($('shipFare').value,10)||0); savePriceCfg(); render(); });
+$('dokdoFare').addEventListener('input', ()=>{ CFG.dokdo = Math.max(0,parseInt($('dokdoFare').value,10)||0); savePriceCfg(); render(); });
 
 /* 오는편: '가는편과 동일'을 고르거나 가는편과 같은 선박을 고르면 동기화 모드 */
 $('shipIn').addEventListener('change', ()=>{
@@ -1554,13 +1627,14 @@ $('resetBtn').addEventListener('click', ()=>{
   $('startDate').value='';
   $('endDate').value='';
   $('tourSel').value='bus';
+  $('rentVeh').value='small';
+  loadTourPriceInput(); loadRentPriceInput(); loadShipFareInput(); loadDokdoFareInput();
   $('dokdoShip').value='';
   $('dokdoAmpm').value='오전';
   $('dokdoHour').value='';
   $('dokdoMin').value='';
   $('dokdoPax').value='';
   dokdoPaxManual=false;
-  $('snorkelChk').checked=false;
   setLodgings([]);
   TIERS.forEach(t=>{
     $(`cnt_${t.key}`).value = t.def;
@@ -1592,6 +1666,11 @@ $('histClearBtn').addEventListener('click', ()=>{
    ============================================================ */
 buildTierRows();
 fillTimeSelects();
+fillTourSelects();
+loadTourPriceInput();
+loadRentPriceInput();
+loadShipFareInput();
+loadDokdoFareInput();
 loadDraft();
 updateSeasonPills();
 renderHistory();
