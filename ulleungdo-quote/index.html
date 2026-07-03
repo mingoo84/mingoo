@@ -591,7 +591,6 @@ footer.note{text-align:center;color:var(--steel);font-size:12px;margin-top:26px;
           <span>유형</span><span>숙소 이름</span><span>방종류</span><span>객실단가</span><span>객실수</span><span></span>
         </div>
         <div id="lodgeList"></div>
-        <datalist id="roomTypeList"></datalist>
         <div class="lodge-price-hint">숙소 요금 = 객실단가 × 객실수 (숙소별 합산되어 총액에 반영). 여러 숙소·방종류를 추가할 수 있습니다.</div>
         <button type="button" class="btn light" id="addLodgeBtn" style="flex:0;min-width:auto;padding:12px 20px;font-size:13.5px;">+ 숙소 추가</button>
       </div>
@@ -775,11 +774,41 @@ const LODGE_NAMES = {
   '리조트': ['대아리조트','라페루즈리조트'],
   '펜션': ['가고싶다'],
 };
-/* 숙소·방종류별 객실단가 (알려진 조합만 자동 채움) */
-const LODGE_ROOM_PRICE = {
-  '힐링호텔': {'2인실':70000, '3인실':80000, '4인실':90000},
+/* 숙소별 방종류 목록 (숙소명 선택 시 방종류 자동완성) — 각 공식 홈페이지 2026-07 확인 */
+const LODGE_ROOMTYPES = {
+  '힐링호텔': ['2인실','3인실','4인실'],
+  '위드유호텔': ['스탠다드 온돌','스탠다드 트윈','디럭스','디럭스 온돌','프리미엄','프리미엄 뷰','3인 패밀리','4인 패밀리','패밀리 도미토리','콘도룸','VIP','VIP 뷰','VIP 패밀리','도미토리 6인실'],
+  '섬바디호텔': ['스탠다드 트윈/더블','스탠다드 트리플','디럭스 트윈','디럭스 트리플','슈페리어 VIP','스위트 VIP','로얄스위트 VIP'],
+  '라페루즈리조트': ['스탠다드 A형','스탠다드 B형','디럭스 A형','디럭스 B형','디럭스 C형','패밀리 A형','패밀리 B형'],
+  '대아리조트': ['본관 양실(바다)','본관 한실(바다)','본관 양실(산)','본관 한실(산)','본관 패밀리룸','본관 로얄스위트','별관 양실(바다)','별관 한실(바다)','별관 한실디럭스','별관 패밀리룸','별관 디럭스스위트','방갈로'],
 };
-const ROOM_TYPES = ['2인실','3인실','4인실','온돌','트윈','더블','패밀리'];
+const ROOM_TYPES = ['2인실','3인실','4인실','온돌','트윈','더블','패밀리']; /* 목록 없는 숙소용 기본 제안 */
+/* 숙소·방종류별 객실단가 [주중, 주말, 성수기] — 요금 시즌에 맞춰 자동 채움 (수정 가능)
+   섬바디: 비수기(11~2월)/성수기(3~10월) 체계 → 주중·주말=비수기가, 성수기=성수기가. 공휴일 할증 별도
+   대아: 비수기 주중/주말, 하계성수기(7/26~8/6) 기준. 기준2인, 초과 1인 15,000
+   라페루즈: 평일/주말/연휴·성수기. 기준2인, 추가 1인 10,000~20,000
+   위드유호텔: 홈페이지에 요금 미게시(전화 054-791-1456 문의) */
+const LODGE_ROOM_PRICE = {
+  '힐링호텔': {'2인실':[70000,70000,70000], '3인실':[80000,80000,80000], '4인실':[90000,90000,90000]},
+  '섬바디호텔': {
+    '스탠다드 트윈/더블':[120000,120000,160000], '스탠다드 트리플':[130000,130000,170000],
+    '디럭스 트윈':[150000,150000,190000], '디럭스 트리플':[180000,180000,220000],
+    '슈페리어 VIP':[180000,180000,220000], '스위트 VIP':[250000,250000,300000], '로얄스위트 VIP':[300000,300000,350000],
+  },
+  '라페루즈리조트': {
+    '스탠다드 A형':[160000,180000,190000], '스탠다드 B형':[150000,170000,180000],
+    '디럭스 A형':[190000,210000,220000], '디럭스 B형':[200000,220000,230000], '디럭스 C형':[210000,230000,240000],
+    '패밀리 A형':[400000,450000,500000], '패밀리 B형':[250000,250000,300000],
+  },
+  '대아리조트': {
+    '본관 양실(바다)':[210000,250000,310000], '본관 한실(바다)':[210000,250000,310000],
+    '본관 양실(산)':[155000,185000,220000], '본관 한실(산)':[155000,185000,220000],
+    '본관 패밀리룸':[210000,250000,310000], '본관 로얄스위트':[300000,340000,360000],
+    '별관 양실(바다)':[155000,185000,220000], '별관 한실(바다)':[155000,185000,220000],
+    '별관 한실디럭스':[175000,205000,240000], '별관 패밀리룸':[240000,285000,325000],
+    '별관 디럭스스위트':[240000,285000,325000], '방갈로':[215000,245000,280000],
+  },
+};
 
 /* ---- 편집 가능한 기본 요금(고정값이되 화면에서 수정 가능, localStorage에 별도 저장) ---- */
 const DEFAULT_SHIP_FARE  = {crz:190000, poh:175000, muk:160000}; /* 대인 왕복 승선권(1인) */
@@ -993,11 +1022,13 @@ function addLodgeRow(data){
   const row = document.createElement('div');
   row.className = 'lodge-row';
   const dlId = 'ldl_'+(++_lodgeSeq);
+  const rtDlId = 'lrt_'+_lodgeSeq;
   row.innerHTML =
     `<select class="l-type" aria-label="숙소 유형">${LODGE_TYPES.map(t=>`<option${data&&data.type===t?' selected':''}>${t}</option>`).join('')}</select>
      <input class="l-name" list="${dlId}" placeholder="숙소 이름" value="${data?esc(data.name||''):''}" autocomplete="off">
      <datalist id="${dlId}"></datalist>
-     <input class="l-roomtype" list="roomTypeList" placeholder="방종류" value="${data?esc(data.roomType||''):''}" autocomplete="off">
+     <input class="l-roomtype" list="${rtDlId}" placeholder="방종류" value="${data?esc(data.roomType||''):''}" autocomplete="off">
+     <datalist id="${rtDlId}"></datalist>
      <input class="l-unit" type="text" placeholder="객실단가" value="${data&&data.unit?fmtWon(data.unit):''}" inputmode="numeric" autocomplete="off">
      <input class="l-count" type="number" min="0" placeholder="객실수" value="${data&&data.count!=null?data.count:1}" inputmode="numeric">
      <button type="button" class="del" aria-label="숙소 삭제">×</button>`;
@@ -1006,16 +1037,18 @@ function addLodgeRow(data){
   const rtEl   = row.querySelector('.l-roomtype');
   const unitEl = row.querySelector('.l-unit');
   const nameDl = row.querySelector('#'+dlId);
-  /* 유형별 숙소명 자동완성 채우기 */
+  const rtDl   = row.querySelector('#'+rtDlId);
+  /* 유형별 숙소명 / 숙소별 방종류 자동완성 채우기 */
   function fillNames(){ nameDl.innerHTML = (LODGE_NAMES[typeEl.value]||[]).map(n=>`<option value="${esc(n)}"></option>`).join(''); }
-  fillNames();
-  /* 알려진 숙소·방종류 조합이면 객실단가 자동 채움 */
+  function fillRoomTypes(){ rtDl.innerHTML = (LODGE_ROOMTYPES[nameEl.value.trim()]||ROOM_TYPES).map(n=>`<option value="${esc(n)}"></option>`).join(''); }
+  fillNames(); fillRoomTypes();
+  /* 알려진 숙소·방종류 조합이면 현재 요금 시즌(주중/주말/성수기)에 맞는 단가 자동 채움 */
   function autofillUnit(){
-    const p = (LODGE_ROOM_PRICE[nameEl.value.trim()]||{})[rtEl.value.trim()];
-    if(p){ unitEl.value = fmtWon(p); }
+    const arr = (LODGE_ROOM_PRICE[nameEl.value.trim()]||{})[rtEl.value.trim()];
+    if(arr){ unitEl.value = fmtWon(arr[season] ?? arr[0]); }
   }
   typeEl.addEventListener('change', ()=>{ fillNames(); render(); });
-  nameEl.addEventListener('change', ()=>{ autofillUnit(); render(); });
+  nameEl.addEventListener('change', ()=>{ fillRoomTypes(); autofillUnit(); render(); });
   rtEl.addEventListener('change', ()=>{ autofillUnit(); render(); });
   row.querySelector('.del').addEventListener('click', ()=>{ row.remove(); render(); });
   row.querySelectorAll('input').forEach(el=>{
@@ -1832,7 +1865,6 @@ $('histClearBtn').addEventListener('click', ()=>{
 buildTierRows();
 fillTimeSelects();
 fillTourSelects();
-$('roomTypeList').innerHTML = ROOM_TYPES.map(r=>`<option value="${r}"></option>`).join('');
 loadTourPriceInput();
 loadRentPriceInput();
 loadShipFareInput();
