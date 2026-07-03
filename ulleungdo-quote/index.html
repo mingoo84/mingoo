@@ -449,11 +449,11 @@ footer.note{text-align:center;color:var(--steel);font-size:12px;margin-top:26px;
         <div class="field-row">
           <div class="field">
             <label for="shipFare">왕복 승선권 (대인 1인) <span class="badge-auto">수정 가능</span></label>
-            <input id="shipFare" type="number" min="0" step="1000" inputmode="numeric">
+            <input id="shipFare" type="text" inputmode="numeric" autocomplete="off">
           </div>
           <div class="field">
             <label for="fuelFare">유류할증료 (1인) <span class="badge-auto">수정 가능</span></label>
-            <input id="fuelFare" type="number" min="0" step="500" inputmode="numeric">
+            <input id="fuelFare" type="text" inputmode="numeric" autocomplete="off">
           </div>
         </div>
         <div class="hint" style="margin-bottom:14px;">승선권은 선사 기본값이 자동 입력되고 등급별 할인(소인 50% 등)이 이 금액 기준으로 적용됩니다. 유류할증료는 할인 없이 1인당 그대로 더해지며, 한 번 수정하면 계속 유지됩니다.</div>
@@ -524,7 +524,7 @@ footer.note{text-align:center;color:var(--steel);font-size:12px;margin-top:26px;
         <div class="field-row" style="grid-template-columns:1fr;">
           <div class="field">
             <label for="dokdoFare">독도 1인 추가요금 <span class="badge-auto">수정 가능</span></label>
-            <input id="dokdoFare" type="number" min="0" step="1000" inputmode="numeric" disabled>
+            <input id="dokdoFare" type="text" inputmode="numeric" autocomplete="off" disabled>
           </div>
         </div>
         <div class="hint" style="margin-bottom:14px;">선박을 고르면 독도 코스가 포함되고 시간·인원·요금을 입력할 수 있습니다 (미선택이면 비활성화). 독도 추가요금은 <b>탐방 인원 × 1인 추가요금</b>으로 별도 항목 계산되며, 한 번 수정하면 계속 유지됩니다. 독도 운항 일정은 위 선사 페이지에서 확인하세요.</div>
@@ -539,7 +539,7 @@ footer.note{text-align:center;color:var(--steel);font-size:12px;margin-top:26px;
           </div>
           <div class="field" id="tourPriceField">
             <label for="tourPrice" id="tourPriceLabel">투어 요금 (총액) <span class="badge-auto">수정 가능</span></label>
-            <input id="tourPrice" type="number" min="0" step="1000" inputmode="numeric">
+            <input id="tourPrice" type="text" inputmode="numeric" autocomplete="off">
           </div>
         </div>
         <div class="field-row" id="rentRow" style="display:none;">
@@ -549,7 +549,7 @@ footer.note{text-align:center;color:var(--steel);font-size:12px;margin-top:26px;
           </div>
           <div class="field">
             <label for="rentPrice">차종 요금 (총액) <span class="badge-auto">수정 가능</span></label>
-            <input id="rentPrice" type="number" min="0" step="1000" inputmode="numeric">
+            <input id="rentPrice" type="text" inputmode="numeric" autocomplete="off">
           </div>
         </div>
         <div class="hint" id="tourPPHint">투어 요금은 팀 전체 총액입니다. 1인당 = 총액 ÷ 인원으로 자동 계산되어 견적에 반영됩니다.</div>
@@ -777,6 +777,10 @@ const esc = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>
 
 function fmt(n){ return n.toLocaleString('ko-KR') + '원'; }
 function round100(x){ return Math.round(x/100)*100; }
+/* 요금 입력칸: 쉼표 표시용 파서/포매터 */
+function parseWonVal(v){ const n = parseInt(String(v).replace(/[^\d]/g,''),10); return isNaN(n) ? 0 : n; }
+function fmtWon(n){ return (n||0).toLocaleString('ko-KR'); }
+function reformatWonInput(el){ const raw = el.value.trim(); el.value = raw==='' ? '' : fmtWon(parseWonVal(raw)); }
 function fmtDate(dateStr){
   if(!dateStr) return '-';
   const d = new Date(dateStr+'T00:00:00');
@@ -813,11 +817,11 @@ function fillTourSelects(){
   $('tourSel').innerHTML = TOUR_ORDER.map(k=>`<option value="${k}">${TOUR_LABEL[k]}</option>`).join('');
   $('rentVeh').innerHTML = RENT_ORDER.map(k=>`<option value="${k}">${RENT_LABEL[k]}</option>`).join('');
 }
-function loadTourPriceInput(){ $('tourPrice').value = CFG.tour[$('tourSel').value] ?? 0; }
-function loadRentPriceInput(){ $('rentPrice').value = CFG.rent[$('rentVeh').value] ?? 0; }
-function loadShipFareInput(){ $('shipFare').value = CFG.ship[$('shipOut').value] ?? 0; }
-function loadDokdoFareInput(){ $('dokdoFare').value = CFG.dokdo ?? 0; }
-function loadFuelFareInput(){ $('fuelFare').value = CFG.fuel ?? 0; }
+function loadTourPriceInput(){ $('tourPrice').value = fmtWon(CFG.tour[$('tourSel').value] ?? 0); }
+function loadRentPriceInput(){ $('rentPrice').value = fmtWon(CFG.rent[$('rentVeh').value] ?? 0); }
+function loadShipFareInput(){ $('shipFare').value = fmtWon(CFG.ship[$('shipOut').value] ?? 0); }
+function loadDokdoFareInput(){ $('dokdoFare').value = fmtWon(CFG.dokdo ?? 0); }
+function loadFuelFareInput(){ $('fuelFare').value = fmtWon(CFG.fuel ?? 0); }
 function numToKorean(num){
   if(num===0) return '영원';
   const digits=['','일','이','삼','사','오','육','칠','팔','구'];
@@ -933,11 +937,11 @@ function addLodgeRow(data){
   row.innerHTML =
     `<select class="l-type" aria-label="숙소 유형">${LODGE_TYPES.map(t=>`<option${data&&data.type===t?' selected':''}>${t}</option>`).join('')}</select>
      <input class="l-name" placeholder="숙소명 · 객실 (예: OO호텔 트윈 2실)" value="${data?esc(data.name||''):''}" autocomplete="off">
-     <input class="l-price" type="number" min="0" step="1000" placeholder="추가요금" value="${data&&data.price?data.price:''}" inputmode="numeric">
+     <input class="l-price" type="text" placeholder="추가요금" value="${data&&data.price?fmtWon(data.price):''}" inputmode="numeric" autocomplete="off">
      <button type="button" class="del" aria-label="숙소 삭제">×</button>`;
   row.querySelector('.del').addEventListener('click', ()=>{ row.remove(); render(); });
   row.querySelectorAll('select,input').forEach(el=>{
-    el.addEventListener('input', render);
+    el.addEventListener('input', ()=>{ if(el.classList.contains('l-price')) reformatWonInput(el); render(); });
     el.addEventListener('change', render);
   });
   list.appendChild(row);
@@ -946,7 +950,7 @@ function getLodgings(){
   return [...document.querySelectorAll('#lodgeList .lodge-row')].map(r=>({
     type: r.querySelector('.l-type').value,
     name: r.querySelector('.l-name').value.trim(),
-    price: Math.max(0, parseInt(r.querySelector('.l-price').value,10)||0),
+    price: parseWonVal(r.querySelector('.l-price').value),
   })).filter(l=>l.name || l.price>0);
 }
 function setLodgings(arr){
@@ -986,8 +990,8 @@ function computeQuote(){
   const totalPax = Object.values(counts).reduce((a,b)=>a+b,0);
 
   /* 승선권(대인 1인) + 유류할증료(1인, 할인 없음) */
-  const shipFare = Math.max(0, parseInt($('shipFare').value,10)||0);
-  const fuelFare = Math.max(0, parseInt($('fuelFare').value,10)||0);
+  const shipFare = parseWonVal($('shipFare').value);
+  const fuelFare = parseWonVal($('fuelFare').value);
 
   /* 실효 인원: 인원 구성 합계와 직접 수정한 총 팀 인원 중 큰 값 (투어 인당 계산 기준) */
   const effPax = Math.max(totalPax, teamCountManual ? (parseInt($('teamCount').value,10)||0) : 0);
@@ -1429,9 +1433,9 @@ function applyForm(f){
   $('rentVeh').value = f.rentVeh||'small';
   loadTourPriceInput(); loadRentPriceInput();
   loadShipFareInput();
-  if(f.shipFare) $('shipFare').value = f.shipFare;
+  if(f.shipFare){ $('shipFare').value = f.shipFare; reformatWonInput($('shipFare')); }
   loadFuelFareInput();
-  if(f.fuelFare) $('fuelFare').value = f.fuelFare;
+  if(f.fuelFare){ $('fuelFare').value = f.fuelFare; reformatWonInput($('fuelFare')); }
   loadDokdoFareInput();
   $('dokdoShip').value = f.dokdoShip||'';
   $('dokdoAmpm').value = f.dokdoAmpm||'오전';
@@ -1561,12 +1565,12 @@ $('shipOut').addEventListener('change', ()=>{ loadShipFareInput(); render(); });
 $('tourSel').addEventListener('change', ()=>{ loadTourPriceInput(); render(); });
 $('rentVeh').addEventListener('change', ()=>{ loadRentPriceInput(); render(); });
 
-/* 편집 가능한 요금 입력 → CFG에 저장(다음에도 유지) */
-$('tourPrice').addEventListener('input', ()=>{ CFG.tour[$('tourSel').value] = Math.max(0,parseInt($('tourPrice').value,10)||0); savePriceCfg(); render(); });
-$('rentPrice').addEventListener('input', ()=>{ CFG.rent[$('rentVeh').value] = Math.max(0,parseInt($('rentPrice').value,10)||0); savePriceCfg(); render(); });
-$('shipFare').addEventListener('input', ()=>{ CFG.ship[$('shipOut').value] = Math.max(0,parseInt($('shipFare').value,10)||0); savePriceCfg(); render(); });
-$('fuelFare').addEventListener('input', ()=>{ CFG.fuel = Math.max(0,parseInt($('fuelFare').value,10)||0); savePriceCfg(); render(); });
-$('dokdoFare').addEventListener('input', ()=>{ CFG.dokdo = Math.max(0,parseInt($('dokdoFare').value,10)||0); savePriceCfg(); render(); });
+/* 편집 가능한 요금 입력 → 쉼표 자동 표시 + CFG에 저장(다음에도 유지) */
+$('tourPrice').addEventListener('input', ()=>{ reformatWonInput($('tourPrice')); CFG.tour[$('tourSel').value] = parseWonVal($('tourPrice').value); savePriceCfg(); render(); });
+$('rentPrice').addEventListener('input', ()=>{ reformatWonInput($('rentPrice')); CFG.rent[$('rentVeh').value] = parseWonVal($('rentPrice').value); savePriceCfg(); render(); });
+$('shipFare').addEventListener('input', ()=>{ reformatWonInput($('shipFare')); CFG.ship[$('shipOut').value] = parseWonVal($('shipFare').value); savePriceCfg(); render(); });
+$('fuelFare').addEventListener('input', ()=>{ reformatWonInput($('fuelFare')); CFG.fuel = parseWonVal($('fuelFare').value); savePriceCfg(); render(); });
+$('dokdoFare').addEventListener('input', ()=>{ reformatWonInput($('dokdoFare')); CFG.dokdo = parseWonVal($('dokdoFare').value); savePriceCfg(); render(); });
 
 /* 오는편: '가는편과 동일'을 고르거나 가는편과 같은 선박을 고르면 동기화 모드 */
 $('shipIn').addEventListener('change', ()=>{
