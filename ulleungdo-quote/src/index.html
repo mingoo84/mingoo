@@ -362,8 +362,9 @@ footer.note{text-align:center;color:var(--steel);font-size:12px;margin-top:26px;
             <input id="staffTel" value="010-3361-4142" readonly>
           </div>
           <div class="field">
-            <label for="teamCount">인원(총 팀 인원) <span class="badge-auto">자동 합산</span></label>
-            <input id="teamCount" type="number" min="0" value="1" readonly>
+            <label for="teamCount">인원(총 팀 인원) <span class="badge-auto" id="teamBadge">자동 합산</span></label>
+            <input id="teamCount" type="number" min="0" value="1" inputmode="numeric">
+            <span class="hint" style="margin-top:2px;">평소엔 인원 구성 합계로 자동 입력됩니다. 무료 유아 등 포함 총원이 다르면 직접 고치세요 — "N인팀" 문구에 반영됩니다.</span>
           </div>
         </div>
       </div>
@@ -616,6 +617,7 @@ const HIST_KEY  = 'gt_quote_hist_v3';
 
 let season = 0;          // 0 주중 / 1 주말 / 2 성수기
 let seasonIsAuto = true; // 자동 추천 상태인지
+let teamCountManual = false; // 총 팀 인원을 직접 수정했는지 (false면 인원 구성 합계로 자동)
 
 /* ============================================================
    유틸
@@ -777,7 +779,8 @@ function render(){
   $('totalAmount').textContent = fmt(q.total);
   $('totalAmountKr').textContent = q.total>0 ? numToKorean(q.total)+'정' : '';
   $('stickyAmt').textContent = fmt(q.total);
-  $('teamCount').value = q.totalPax;
+  if(!teamCountManual){ $('teamCount').value = q.totalPax; }
+  $('teamBadge').textContent = teamCountManual ? '직접 수정됨' : '자동 합산';
   $('depositLine').innerHTML = `계약금 <b>${fmt(q.totalPax*DEPOSIT_PER_PERSON)}</b> (${q.totalPax}인 × ${fmt(DEPOSIT_PER_PERSON)})`;
 
   const bd = $('breakdown');
@@ -891,6 +894,8 @@ function generateQuote(fromSticky){
   const endDate = addDays(startDate, q.nights); /* 도착일 = 출발일 + 박수 */
   const lodging = $('lodging').value.trim() || '(숙소 미정)';
   const deposit = q.totalPax*DEPOSIT_PER_PERSON;
+  /* "N인팀" 표기: 직접 수정한 총 팀 인원 우선 (무료 유아 등 포함), 금액·계약금은 요금등급 합계 기준 */
+  const teamPax = teamCountManual ? (parseInt($('teamCount').value,10) || q.totalPax) : q.totalPax;
 
   let paxLine = [];
   if(q.counts.adult) paxLine.push(`대인 ${q.counts.adult}인 (인당 ${fmt(q.lines.find(l=>l.tier==='adult')?.unit||0)})`);
@@ -906,7 +911,7 @@ function generateQuote(fromSticky){
 수신 ${custName}님   담당 ${staffName}   연락처 ${staffTel}
 발신 굿투어
 
-1. 건   명 : ${custName}님 ${q.totalPax}인팀 ${SHIP_LABEL[q.ship]} ${TOUR_LABEL[q.tour]}${q.dokdo?'+독도':''}
+1. 건   명 : ${custName}님 ${teamPax}인팀 ${SHIP_LABEL[q.ship]} ${TOUR_LABEL[q.tour]}${q.dokdo?'+독도':''}
 2. 기   간 : ${fmtDate(startDate)} ~ ${fmtDate(endDate)} (${q.nights===1?'1박2일':'2박3일'} · ${seasonWord})
 3. 제   공 : 굿투어주식회사(사업자: 506-81-87523) / 계좌: 농협 351-0693-3158-03
 4. 포   함 : 왕복승선권 + ${lodging} + ${TOUR_LABEL[q.tour]}${q.dokdo?' + 독도 탐방':''}
@@ -926,7 +931,7 @@ ${rowsToTabText(rows)}
   $('d_staff').textContent = staffName || '굿투어';
   $('d_tel').textContent = staffTel || '-';
   $('d_summary').innerHTML =
-    `<b>1. 건   명</b> : ${custName}님 ${q.totalPax}인팀 ${SHIP_LABEL[q.ship]} ${TOUR_LABEL[q.tour]}${q.dokdo?'+독도':''}\n`+
+    `<b>1. 건   명</b> : ${custName}님 ${teamPax}인팀 ${SHIP_LABEL[q.ship]} ${TOUR_LABEL[q.tour]}${q.dokdo?'+독도':''}\n`+
     `<b>2. 기   간</b> : ${fmtDate(startDate)} ~ ${fmtDate(endDate)}  (${q.nights===1?'1박2일':'2박3일'} · ${seasonWord})\n`+
     `<b>3. 제   공</b> : 굿투어주식회사(사업자: 506-81-87523) / 계좌: 농협 351-0693-3158-03\n`+
     `<b>4. 포   함</b> : 왕복승선권 + ${lodging} + ${TOUR_LABEL[q.tour]}${q.dokdo?' + 독도 탐방':''}\n`+
@@ -964,6 +969,8 @@ function collectForm(){
     cnt_d50: $('cnt_d50').value,
     cnt_d20: $('cnt_d20').value,
     cnt_d10: $('cnt_d10').value,
+    teamCount: $('teamCount').value,
+    teamCountManual,
     season, seasonIsAuto,
   };
 }
@@ -983,6 +990,8 @@ function applyForm(f){
   $('cnt_d10').value = f.cnt_d10??0;
   season = f.season??0;
   seasonIsAuto = f.seasonIsAuto??true;
+  teamCountManual = !!f.teamCountManual;
+  if(teamCountManual && f.teamCount) $('teamCount').value = f.teamCount;
   $('staffTel').value = STAFF_TEL[$('staffName').value] || '010-3361-4142';
   syncEndDate();
   updateSeasonPills();
@@ -1090,6 +1099,17 @@ $('staffName').addEventListener('change', ()=>{
   $(id).addEventListener('change', render);
 });
 
+/* 총 팀 인원: 직접 수정하면 수동 모드, 비우거나 합계와 같으면 자동 복귀 */
+$('teamCount').addEventListener('input', ()=>{
+  const raw = $('teamCount').value.trim();
+  const v = parseInt(raw,10);
+  const sum = computeQuote().totalPax;
+  teamCountManual = !(raw==='' || isNaN(v) || v===sum);
+  $('teamBadge').textContent = teamCountManual ? '직접 수정됨' : '자동 합산';
+  if(!teamCountManual && raw==='') $('teamCount').value = sum;
+  saveDraft();
+});
+
 /* 스테퍼 버튼 */
 document.querySelectorAll('.stepper button').forEach(b=>{
   b.addEventListener('click', ()=>{
@@ -1162,6 +1182,7 @@ $('resetBtn').addEventListener('click', ()=>{
   $('cnt_d10').value=0;
   $('dokdoChk').checked=false;
   season=0; seasonIsAuto=true;
+  teamCountManual=false;
   updateSeasonPills();
   $('quoteText').value='';
   $('d_cust').textContent='-';
