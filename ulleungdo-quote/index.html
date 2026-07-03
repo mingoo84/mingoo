@@ -191,8 +191,20 @@ select.tier-group{
 /* 숙소 리스트 — 유형/이름/방종류/객실단가/객실수/삭제 */
 .lodge-row{
   display:grid;grid-template-columns:74px minmax(0,1.3fr) minmax(0,1fr) 92px 60px 22px;
-  gap:6px;align-items:center;margin-bottom:8px;
+  gap:6px;align-items:center;margin-bottom:8px;position:relative;
 }
+/* 커스텀 자동완성 드롭다운 */
+.ac-menu{
+  position:absolute;z-index:70;background:var(--canvas);
+  border:1.5px solid var(--hairline-strong);border-radius:10px;box-shadow:0 6px 20px rgba(4,38,59,.18);
+  max-height:210px;overflow-y:auto;display:none;-webkit-overflow-scrolling:touch;
+}
+.ac-menu.show{display:block;}
+.ac-menu button{
+  display:block;width:100%;text-align:left;border:none;background:none;
+  padding:10px 12px;font-size:13px;font-family:inherit;color:var(--ink);cursor:pointer;white-space:nowrap;
+}
+.ac-menu button:hover{background:var(--wave-green-bg);}
 .lodge-row select,.lodge-row input{
   border:1.5px solid var(--hairline-strong);border-radius:10px;padding:8px 9px;height:42px;
   font-family:inherit;font-size:13px;color:var(--ink);background:var(--canvas);outline:none;width:100%;
@@ -1021,14 +1033,11 @@ function addLodgeRow(data){
   const list = $('lodgeList');
   const row = document.createElement('div');
   row.className = 'lodge-row';
-  const dlId = 'ldl_'+(++_lodgeSeq);
-  const rtDlId = 'lrt_'+_lodgeSeq;
+  ++_lodgeSeq;
   row.innerHTML =
     `<select class="l-type" aria-label="숙소 유형">${LODGE_TYPES.map(t=>`<option${data&&data.type===t?' selected':''}>${t}</option>`).join('')}</select>
-     <input class="l-name" list="${dlId}" placeholder="숙소 이름" value="${data?esc(data.name||''):''}" autocomplete="off">
-     <datalist id="${dlId}"></datalist>
-     <input class="l-roomtype" list="${rtDlId}" placeholder="방종류" value="${data?esc(data.roomType||''):''}" autocomplete="off">
-     <datalist id="${rtDlId}"></datalist>
+     <input class="l-name" placeholder="숙소 이름" value="${data?esc(data.name||''):''}" autocomplete="off">
+     <input class="l-roomtype" placeholder="방종류" value="${data?esc(data.roomType||''):''}" autocomplete="off">
      <input class="l-unit" type="text" placeholder="객실단가" value="${data&&data.unit?fmtWon(data.unit):''}" inputmode="numeric" autocomplete="off">
      <input class="l-count" type="number" min="0" placeholder="객실수" value="${data&&data.count!=null?data.count:1}" inputmode="numeric">
      <button type="button" class="del" aria-label="숙소 삭제">×</button>`;
@@ -1036,25 +1045,52 @@ function addLodgeRow(data){
   const nameEl = row.querySelector('.l-name');
   const rtEl   = row.querySelector('.l-roomtype');
   const unitEl = row.querySelector('.l-unit');
-  const nameDl = row.querySelector('#'+dlId);
-  const rtDl   = row.querySelector('#'+rtDlId);
-  /* 유형별 숙소명 / 숙소별 방종류 자동완성 채우기 */
-  function fillNames(){ nameDl.innerHTML = (LODGE_NAMES[typeEl.value]||[]).map(n=>`<option value="${esc(n)}"></option>`).join(''); }
-  function fillRoomTypes(){ rtDl.innerHTML = (LODGE_ROOMTYPES[nameEl.value.trim()]||ROOM_TYPES).map(n=>`<option value="${esc(n)}"></option>`).join(''); }
-  fillNames(); fillRoomTypes();
+
+  /* ---- 커스텀 자동완성 드롭다운 (입력칸 바로 아래에 정확히 붙음) ---- */
+  const menu = document.createElement('div');
+  menu.className = 'ac-menu';
+  row.appendChild(menu);
+  let acPick = null;
+  function hideMenu(){ menu.classList.remove('show'); row.style.zIndex=''; }
+  function openMenu(inputEl, items, onPick){
+    const q = inputEl.value.trim().toLowerCase();
+    const filtered = items.filter(it => !q || it.toLowerCase().includes(q));
+    if(!filtered.length){ hideMenu(); return; }
+    menu.innerHTML = filtered.map(it=>`<button type="button" data-v="${esc(it)}">${esc(it)}</button>`).join('');
+    menu.style.left = inputEl.offsetLeft+'px';
+    menu.style.top = (inputEl.offsetTop + inputEl.offsetHeight + 3)+'px';
+    menu.style.minWidth = inputEl.offsetWidth+'px';
+    menu.classList.add('show');
+    row.style.zIndex = '70';
+    acPick = onPick;
+  }
+  menu.addEventListener('mousedown', (e)=>{ /* mousedown이 blur보다 먼저 */
+    const b = e.target.closest('button'); if(!b) return;
+    e.preventDefault();
+    if(acPick) acPick(b.dataset.v);
+    hideMenu();
+  });
+
+  function nameItems(){ return LODGE_NAMES[typeEl.value] || []; }
+  function rtItems(){ return LODGE_ROOMTYPES[nameEl.value.trim()] || ROOM_TYPES; }
   /* 알려진 숙소·방종류 조합이면 현재 요금 시즌(주중/주말/성수기)에 맞는 단가 자동 채움 */
   function autofillUnit(){
     const arr = (LODGE_ROOM_PRICE[nameEl.value.trim()]||{})[rtEl.value.trim()];
     if(arr){ unitEl.value = fmtWon(arr[season] ?? arr[0]); }
   }
-  typeEl.addEventListener('change', ()=>{ fillNames(); render(); });
-  nameEl.addEventListener('change', ()=>{ fillRoomTypes(); autofillUnit(); render(); });
-  rtEl.addEventListener('change', ()=>{ autofillUnit(); render(); });
+
+  typeEl.addEventListener('change', render);
+  nameEl.addEventListener('focus', ()=> openMenu(nameEl, nameItems(), v=>{ nameEl.value=v; autofillUnit(); render(); }));
+  nameEl.addEventListener('input', ()=>{ openMenu(nameEl, nameItems(), v=>{ nameEl.value=v; autofillUnit(); render(); }); render(); });
+  nameEl.addEventListener('blur', ()=> setTimeout(hideMenu, 160));
+  rtEl.addEventListener('focus', ()=> openMenu(rtEl, rtItems(), v=>{ rtEl.value=v; autofillUnit(); render(); }));
+  rtEl.addEventListener('input', ()=>{ openMenu(rtEl, rtItems(), v=>{ rtEl.value=v; autofillUnit(); render(); }); render(); });
+  rtEl.addEventListener('blur', ()=> setTimeout(hideMenu, 160));
+
   row.querySelector('.del').addEventListener('click', ()=>{ row.remove(); render(); });
-  row.querySelectorAll('input').forEach(el=>{
-    el.addEventListener('input', render);
-    if(el.classList.contains('l-unit')) el.addEventListener('blur', ()=>reformatWonInput(el));
-  });
+  unitEl.addEventListener('input', render);
+  unitEl.addEventListener('blur', ()=>reformatWonInput(unitEl));
+  row.querySelector('.l-count').addEventListener('input', render);
   list.appendChild(row);
 }
 function getLodgings(){
