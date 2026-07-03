@@ -591,6 +591,7 @@ footer.note{text-align:center;color:var(--steel);font-size:12px;margin-top:26px;
           <span>유형</span><span>숙소 이름</span><span>방종류</span><span>객실단가</span><span>객실수</span><span></span>
         </div>
         <div id="lodgeList"></div>
+        <datalist id="roomTypeList"></datalist>
         <div class="lodge-price-hint">숙소 요금 = 객실단가 × 객실수 (숙소별 합산되어 총액에 반영). 여러 숙소·방종류를 추가할 수 있습니다.</div>
         <button type="button" class="btn light" id="addLodgeBtn" style="flex:0;min-width:auto;padding:12px 20px;font-size:13.5px;">+ 숙소 추가</button>
       </div>
@@ -767,6 +768,18 @@ const TIERS = [
 const GROUP_LABEL = {adult:'할인 없음', d10:'10% 할인', d20:'20% 할인', d50:'50% 할인'};
 const GROUP_RATE  = {adult:0, d10:0.10, d20:0.20, d50:0.50};
 const LODGE_TYPES = ['모텔','호텔','리조트','펜션'];
+/* 유형별 숙소명 (통합문서1.xlsx 참조 — 모텔급/호텔급/리조트급/펜션급) */
+const LODGE_NAMES = {
+  '모텔': ['힐링호텔','패밀리 호텔'],
+  '호텔': ['위드유호텔','다온프라임호텔','섬바디호텔'],
+  '리조트': ['대아리조트','라페루즈리조트'],
+  '펜션': ['가고싶다'],
+};
+/* 숙소·방종류별 객실단가 (알려진 조합만 자동 채움) */
+const LODGE_ROOM_PRICE = {
+  '힐링호텔': {'2인실':70000, '3인실':80000, '4인실':90000},
+};
+const ROOM_TYPES = ['2인실','3인실','4인실','온돌','트윈','더블','패밀리'];
 
 /* ---- 편집 가능한 기본 요금(고정값이되 화면에서 수정 가능, localStorage에 별도 저장) ---- */
 const DEFAULT_SHIP_FARE  = {crz:190000, poh:175000, muk:160000}; /* 대인 왕복 승선권(1인) */
@@ -974,21 +987,39 @@ function buildTierRows(){
 /* ============================================================
    숙소 리스트 UI (동적)
    ============================================================ */
+let _lodgeSeq = 0;
 function addLodgeRow(data){
   const list = $('lodgeList');
   const row = document.createElement('div');
   row.className = 'lodge-row';
+  const dlId = 'ldl_'+(++_lodgeSeq);
   row.innerHTML =
     `<select class="l-type" aria-label="숙소 유형">${LODGE_TYPES.map(t=>`<option${data&&data.type===t?' selected':''}>${t}</option>`).join('')}</select>
-     <input class="l-name" placeholder="숙소 이름 (예: OO호텔)" value="${data?esc(data.name||''):''}" autocomplete="off">
-     <input class="l-roomtype" placeholder="방종류 (예: 트윈/온돌)" value="${data?esc(data.roomType||''):''}" autocomplete="off">
+     <input class="l-name" list="${dlId}" placeholder="숙소 이름" value="${data?esc(data.name||''):''}" autocomplete="off">
+     <datalist id="${dlId}"></datalist>
+     <input class="l-roomtype" list="roomTypeList" placeholder="방종류" value="${data?esc(data.roomType||''):''}" autocomplete="off">
      <input class="l-unit" type="text" placeholder="객실단가" value="${data&&data.unit?fmtWon(data.unit):''}" inputmode="numeric" autocomplete="off">
      <input class="l-count" type="number" min="0" placeholder="객실수" value="${data&&data.count!=null?data.count:1}" inputmode="numeric">
      <button type="button" class="del" aria-label="숙소 삭제">×</button>`;
+  const typeEl = row.querySelector('.l-type');
+  const nameEl = row.querySelector('.l-name');
+  const rtEl   = row.querySelector('.l-roomtype');
+  const unitEl = row.querySelector('.l-unit');
+  const nameDl = row.querySelector('#'+dlId);
+  /* 유형별 숙소명 자동완성 채우기 */
+  function fillNames(){ nameDl.innerHTML = (LODGE_NAMES[typeEl.value]||[]).map(n=>`<option value="${esc(n)}"></option>`).join(''); }
+  fillNames();
+  /* 알려진 숙소·방종류 조합이면 객실단가 자동 채움 */
+  function autofillUnit(){
+    const p = (LODGE_ROOM_PRICE[nameEl.value.trim()]||{})[rtEl.value.trim()];
+    if(p){ unitEl.value = fmtWon(p); }
+  }
+  typeEl.addEventListener('change', ()=>{ fillNames(); render(); });
+  nameEl.addEventListener('change', ()=>{ autofillUnit(); render(); });
+  rtEl.addEventListener('change', ()=>{ autofillUnit(); render(); });
   row.querySelector('.del').addEventListener('click', ()=>{ row.remove(); render(); });
-  row.querySelectorAll('select,input').forEach(el=>{
+  row.querySelectorAll('input').forEach(el=>{
     el.addEventListener('input', render);
-    el.addEventListener('change', render);
     if(el.classList.contains('l-unit')) el.addEventListener('blur', ()=>reformatWonInput(el));
   });
   list.appendChild(row);
@@ -1801,6 +1832,7 @@ $('histClearBtn').addEventListener('click', ()=>{
 buildTierRows();
 fillTimeSelects();
 fillTourSelects();
+$('roomTypeList').innerHTML = ROOM_TYPES.map(r=>`<option value="${r}"></option>`).join('');
 loadTourPriceInput();
 loadRentPriceInput();
 loadShipFareInput();
