@@ -434,15 +434,38 @@ footer.note{text-align:center;color:var(--steel);font-size:12px;margin-top:26px;
         </div>
         <div class="hint" id="mixHint" style="display:none;margin-bottom:12px;">가는편·오는편 선사가 달라 두 선사 왕복 요금의 평균으로 계산합니다.</div>
 
-        <div class="field-row" style="grid-template-columns:1fr;">
+        <h3 class="sub">③ 독도 탐방</h3>
+        <div class="field-row">
           <div class="field">
-            <label for="dokdoTime">독도 탐방 시간 (선택)</label>
-            <input id="dokdoTime" type="time">
-            <span class="hint" style="margin-top:2px;">위 선사 페이지에 독도 운항 일정도 함께 나와 있습니다. 시간을 고르면 '독도 코스 포함'이 자동 체크되고 견적서 일정표에 표시됩니다.</span>
+            <label for="dokdoShip">독도 탐방 선박</label>
+            <select id="dokdoShip">
+              <option value="">미선택</option>
+              <option value="썬라이즈호">썬라이즈호</option>
+              <option value="씨스타1호">씨스타1호</option>
+              <option value="독도드림호">독도드림호</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="dokdoPax">독도 탐방 인원 <span class="badge-auto" id="dokdoPaxBadge" style="display:none;">전원</span></label>
+            <input id="dokdoPax" type="number" min="0" inputmode="numeric" disabled placeholder="-">
           </div>
         </div>
+        <div class="field-row">
+          <div class="field">
+            <label for="dokdoAmpm">시간대</label>
+            <select id="dokdoAmpm" disabled>
+              <option value="오전">오전</option>
+              <option value="오후">오후</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="dokdoTime">출항 시간</label>
+            <input id="dokdoTime" type="time" disabled>
+          </div>
+        </div>
+        <div class="hint" style="margin-bottom:14px;">선박을 고르면 독도 코스가 자동 포함되고 시간·인원을 입력할 수 있습니다 (미선택이면 비활성화). 탐방 인원이 전체 인원보다 적으면, 미참여 인원은 독도 요금이 빠지고 <b>참여 인원 × 대인 기준 독도 추가요금</b>이 별도 항목으로 계산됩니다. 독도 운항 일정은 위 선사 페이지에서 확인하세요.</div>
 
-        <h3 class="sub">③ 일자 · 시즌</h3>
+        <h3 class="sub">④ 일자 · 시즌</h3>
         <div class="field-row">
           <div class="field">
             <label for="daySel">일정</label>
@@ -671,6 +694,7 @@ const HIST_KEY  = 'gt_quote_hist_v4';
 let season = 0;
 let seasonIsAuto = true;
 let teamCountManual = false;
+let dokdoPaxManual = false; // 독도 탐방 인원을 직접 수정했는지 (false면 전체 인원 자동)
 
 /* ============================================================
    유틸
@@ -851,16 +875,29 @@ function computeQuote(){
   const tour = $('tourSel').value;
   const dokdo = $('dokdoChk').checked;
   const snorkel = tour==='rent' && $('snorkelChk').checked;
-  const col = season + (dokdo ? 3 : 0);
+
+  /* 인원 집계 먼저 */
+  const counts = {};
+  TIERS.forEach(t=>{ counts[t.key] = Math.max(0, parseInt($(`cnt_${t.key}`).value,10)||0); });
+  const totalPax = Object.values(counts).reduce((a,b)=>a+b,0);
+
+  /* 독도 부분 참여 판단: 선박 선택 + 인원 직접 수정 + 전체보다 적을 때만 */
+  const dokdoShip = $('dokdoShip').value;
+  let dokdoPax = totalPax;
+  if(dokdo && dokdoShip && dokdoPaxManual){
+    const dp = parseInt($('dokdoPax').value,10);
+    if(!isNaN(dp)) dokdoPax = Math.max(0, Math.min(dp, totalPax));
+  }
+  const dokdoPartial = dokdo && dokdoPax < totalPax;
+
+  /* 전원 참여면 원장 독도 열 그대로, 부분 참여면 기본가 + 별도 추가요금 */
+  const col = season + (dokdo && !dokdoPartial ? 3 : 0);
 
   let total = 0;
   const lines = [];
-  const counts = {};
   TIERS.forEach(t=>{
-    const c = Math.max(0, parseInt($(`cnt_${t.key}`).value,10)||0);
-    counts[t.key] = c;
+    const c = counts[t.key];
     const group = $(`grp_${t.key}`) ? $(`grp_${t.key}`).value : t.group;
-    /* 가는편·오는편 평균 → 100원 단위 반올림 */
     const raw = (shipUnitRaw(ships.out, nights, group, tour, snorkel, col)
                + shipUnitRaw(ships.in,  nights, group, tour, snorkel, col)) / 2;
     const unit = round100(raw);
@@ -871,12 +908,24 @@ function computeQuote(){
     }
   });
 
+  /* 부분 참여: 참여 인원 × 대인 기준 독도 추가요금 (가는편·오는편 평균) */
+  let dokdoUnit = 0;
+  if(dokdoPartial && dokdoPax > 0){
+    const surchOut = shipUnitRaw(ships.out, nights, 'adult', tour, snorkel, season+3)
+                   - shipUnitRaw(ships.out, nights, 'adult', tour, snorkel, season);
+    const surchIn  = shipUnitRaw(ships.in,  nights, 'adult', tour, snorkel, season+3)
+                   - shipUnitRaw(ships.in,  nights, 'adult', tour, snorkel, season);
+    dokdoUnit = round100((surchOut + surchIn) / 2);
+    total += dokdoUnit * dokdoPax;
+    lines.push({key:'dokdo', label:'독도 탐방 추가', c:dokdoPax, unit:dokdoUnit, sub:dokdoUnit*dokdoPax});
+  }
+
   const lodgings = getLodgings();
   const lodgeExtra = lodgings.reduce((s,l)=>s+l.price, 0);
   total += lodgeExtra;
 
-  const totalPax = Object.values(counts).reduce((a,b)=>a+b,0);
-  return {ships, nights, tour, dokdo, snorkel, season, counts, totalPax, total, lines, lodgings, lodgeExtra};
+  return {ships, nights, tour, dokdo, snorkel, season, counts, totalPax, total, lines, lodgings, lodgeExtra,
+          dokdoShip, dokdoPax, dokdoPartial, dokdoUnit};
 }
 
 /* ============================================================
@@ -924,13 +973,28 @@ function render(){
   $('snorkelWrap').style.display = $('tourSel').value==='rent' ? 'flex' : 'none';
   $('tourHint').style.display = $('tourSel').value==='combi' ? 'block' : 'none';
 
+  /* 독도 컨트롤: 선박 미선택이면 시간대·시간·인원 비활성화 */
+  const dokdoOn = !!q.dokdoShip;
+  $('dokdoAmpm').disabled = !dokdoOn;
+  $('dokdoTime').disabled = !dokdoOn;
+  $('dokdoPax').disabled = !dokdoOn;
+  if(dokdoOn){
+    if(!dokdoPaxManual) $('dokdoPax').value = q.totalPax;
+    $('dokdoPaxBadge').style.display = 'inline-block';
+    $('dokdoPaxBadge').textContent = dokdoPaxManual ? '직접 수정됨' : '전원 참여';
+  } else {
+    $('dokdoPax').value = '';
+    $('dokdoPaxBadge').style.display = 'none';
+  }
+
   $('ticketDays').textContent = q.nights===1 ? '1박 2일' : '2박 3일';
   const start = $('startDate').value;
   const dday = dDayText(start);
   $('ticketDate').innerHTML = start ? `${fmtDate(start)}${dday?`<span class="dday">${dday}</span>`:''}` : '-';
   $('ticketPax').textContent = q.totalPax+'명';
   $('ticketSeason').textContent = SEASON_LABEL[q.season]
-    + (q.dokdo? ' · 독도':'') + (q.snorkel? ' · 스노클링':'');
+    + (q.dokdo? (q.dokdoPartial? ` · 독도(${q.dokdoPax}명)` : ' · 독도') : '')
+    + (q.snorkel? ' · 스노클링':'');
   $('totalAmount').textContent = fmt(q.total);
   $('totalAmountKr').textContent = q.total>0 ? numToKorean(q.total)+'정' : '';
   $('stickyAmt').textContent = fmt(q.total);
@@ -961,7 +1025,7 @@ function render(){
 /* ============================================================
    일정표
    ============================================================ */
-function buildItineraryRows(nights, tour, dokdo, snorkel, dokdoTime){
+function buildItineraryRows(nights, tour, dokdo, snorkel, dk){
   const tourWord = {bus:'버스투어', taxi:'택시투어', combi:'콤비투어', rent:'렌터카'}[tour] || '투어';
   const rows = [];
   rows.push(['1일차','오전','승선권 수령 및 승선','']);
@@ -973,7 +1037,10 @@ function buildItineraryRows(nights, tour, dokdo, snorkel, dokdoTime){
   rows.push(['1일차','','석식','']);
   rows.push(['2일차','오전','조식','']);
   if(dokdo){
-    rows.push(['2일차', dokdoTime||'', '◆ 우리땅 독도 탐방'+(dokdoTime?` (${dokdoTime} 출항)`:''), '기상에 따라 변경']);
+    let detail = '';
+    if(dk && dk.ship) detail = ` (${dk.ship}${dk.time?` · ${dk.ampm} ${dk.time} 출항`:` · ${dk.ampm} 출항`})`;
+    else if(dk && dk.time) detail = ` (${dk.ampm} ${dk.time} 출항)`;
+    rows.push(['2일차', (dk&&dk.time)||'', '◆ 우리땅 독도 탐방'+detail, '기상에 따라 변경']);
   } else if(nights===2){
     rows.push(['2일차','','◆ 선택관광 or 자유일정','']);
   }
@@ -1082,9 +1149,16 @@ function generateQuote(fromSticky){
   if(q.lodgeExtra>0) paxLines.push(`   - 숙소 추가요금 = ${fmt(q.lodgeExtra)}`);
 
   const dokdoTime = $('dokdoTime').value;
-  const rows = buildItineraryRows(q.nights, q.tour, q.dokdo, q.snorkel, dokdoTime);
+  const dokdoAmpm = $('dokdoAmpm').value;
+  const dk = {ship: q.dokdoShip, ampm: dokdoAmpm, time: dokdoTime};
+  const rows = buildItineraryRows(q.nights, q.tour, q.dokdo, q.snorkel, dk);
   const tourFull = TOUR_LABEL[q.tour] + (q.snorkel?'+스노클링':'');
-  const dokdoWord = q.dokdo ? ` + 독도 탐방${dokdoTime?`(${dokdoTime} 출항)`:''}` : '';
+  const bits = [];
+  if(q.dokdoShip) bits.push(q.dokdoShip);
+  if(dokdoTime) bits.push(`${dokdoAmpm} ${dokdoTime} 출항`);
+  else if(q.dokdoShip) bits.push(`${dokdoAmpm} 출항`);
+  if(q.dokdoPartial) bits.push(`${q.dokdoPax}명 참여`);
+  const dokdoWord = q.dokdo ? ` + 독도 탐방${bits.length?`(${bits.join(' · ')})`:''}` : '';
 
   const text =
 `현지 여행사 굿투어  ${shipText(q.ships)}   울릉도여행 일정 및 견적서
@@ -1147,7 +1221,11 @@ function collectForm(){
     startDate: $('startDate').value,
     tourSel: $('tourSel').value,
     dokdo: $('dokdoChk').checked,
+    dokdoShip: $('dokdoShip').value,
+    dokdoAmpm: $('dokdoAmpm').value,
     dokdoTime: $('dokdoTime').value,
+    dokdoPax: $('dokdoPax').value,
+    dokdoPaxManual,
     snorkel: $('snorkelChk').checked,
     lodgings: getLodgings(),
     teamCount: $('teamCount').value,
@@ -1171,7 +1249,11 @@ function applyForm(f){
   $('startDate').value = f.startDate||'';
   $('tourSel').value = f.tourSel||'bus';
   $('dokdoChk').checked = !!f.dokdo;
+  $('dokdoShip').value = f.dokdoShip||'';
+  $('dokdoAmpm').value = f.dokdoAmpm||'오전';
   $('dokdoTime').value = f.dokdoTime||'';
+  dokdoPaxManual = !!f.dokdoPaxManual;
+  if(dokdoPaxManual && f.dokdoPax) $('dokdoPax').value = f.dokdoPax;
   $('snorkelChk').checked = !!f.snorkel;
   setLodgings(f.lodgings);
   TIERS.forEach(t=>{
@@ -1294,13 +1376,52 @@ $('custName').addEventListener('input', ()=>{
   if($('custName').value.trim()) $('f_custName').classList.remove('error');
 });
 
-/* 독도 탐방 시간: 시간을 고르면 독도 코스 자동 체크 */
-$('dokdoTime').addEventListener('change', ()=>{
-  if($('dokdoTime').value && !$('dokdoChk').checked){
-    $('dokdoChk').checked = true;
-    toast('독도 코스 포함이 자동으로 체크되었습니다');
+/* 독도 탐방: 선박을 고르면 독도 코스 자동 체크, 미선택이면 해제 + 하위 컨트롤 초기화 */
+$('dokdoShip').addEventListener('change', ()=>{
+  if($('dokdoShip').value){
+    if(!$('dokdoChk').checked){
+      $('dokdoChk').checked = true;
+      toast('독도 코스 포함이 자동으로 체크되었습니다');
+    }
+  } else {
+    $('dokdoChk').checked = false;
+    $('dokdoTime').value = '';
+    $('dokdoAmpm').value = '오전';
+    dokdoPaxManual = false;
   }
   render();
+});
+/* 시간 입력 시 오전/오후 자동 판별 */
+$('dokdoTime').addEventListener('change', ()=>{
+  const v = $('dokdoTime').value;
+  if(v){
+    const h = parseInt(v.split(':')[0],10);
+    $('dokdoAmpm').value = h < 12 ? '오전' : '오후';
+  }
+  render();
+});
+$('dokdoAmpm').addEventListener('change', render);
+/* 독도 인원: 직접 수정하면 수동 모드, 비우거나 전체와 같으면 전원 참여로 복귀 */
+$('dokdoPax').addEventListener('input', ()=>{
+  const raw = $('dokdoPax').value.trim();
+  const v = parseInt(raw,10);
+  const q0 = computeQuote();
+  dokdoPaxManual = !(raw==='' || isNaN(v) || v>=q0.totalPax);
+  if(!isNaN(v) && v > q0.totalPax){
+    $('dokdoPax').value = q0.totalPax;
+    toast('독도 탐방 인원은 전체 인원을 넘을 수 없습니다', true);
+  }
+  render();
+});
+/* 독도 체크 해제 시 선박·시간·인원 리셋 */
+$('dokdoChk').addEventListener('change', ()=>{
+  if(!$('dokdoChk').checked && $('dokdoShip').value){
+    $('dokdoShip').value = '';
+    $('dokdoTime').value = '';
+    $('dokdoAmpm').value = '오전';
+    dokdoPaxManual = false;
+    render();
+  }
 });
 
 $('teamCount').addEventListener('input', ()=>{
@@ -1370,7 +1491,11 @@ $('resetBtn').addEventListener('click', ()=>{
   $('endDate').value='';
   $('tourSel').value='bus';
   $('dokdoChk').checked=false;
+  $('dokdoShip').value='';
+  $('dokdoAmpm').value='오전';
   $('dokdoTime').value='';
+  $('dokdoPax').value='';
+  dokdoPaxManual=false;
   $('snorkelChk').checked=false;
   setLodgings([]);
   TIERS.forEach(t=>{
