@@ -396,17 +396,17 @@ footer.note{text-align:center;color:var(--steel);font-size:12px;margin-top:26px;
         <div class="ship-links">
           <a class="ship-card" target="_blank" rel="noopener" id="link_crz" href="https://www.ulcruise.co.kr/www/flight/timetable?sub_mode=today">
             <div class="sname">울릉크루즈 · 운항시간표</div>
-            <div class="sdesc">포항크루즈 · 뉴씨다오펄호<br>가까운 날짜(1~2주 이내)만 실제 운항정보 표시</div>
+            <div class="sdesc">포항크루즈 · 뉴씨다오펄호<br>가까운 날짜(1~2주 이내)만 실제 운항정보 표시 · 독도 일정도 확인 가능</div>
             <div class="go">선택한 출발일로 바로가기 →</div>
           </a>
           <a class="ship-card" target="_blank" rel="noopener" id="link_poh" href="https://www.daezer.com/departure/departure-schedule.html">
             <div class="sname">대저해운 · 운항시간표</div>
-            <div class="sdesc">포항쾌속 · 엘도라도 익스프레스호<br>월별 캘린더에서 결항/시간 확인</div>
+            <div class="sdesc">포항쾌속 · 엘도라도 익스프레스호<br>월별 캘린더에서 결항/시간 확인 · 독도 일정도 확인 가능</div>
             <div class="go">선택한 출발월로 바로가기 →</div>
           </a>
           <a class="ship-card" target="_blank" rel="noopener" id="link_muk" href="https://www.seaspovill.co.kr/board/bbs/board.php?bo_table=schedule">
             <div class="sname">씨스포빌 · 운항일정</div>
-            <div class="sdesc">묵호/강릉 출항<br>자동 조회 불가 — 게시판에서 직접 확인</div>
+            <div class="sdesc">묵호/강릉 출항<br>자동 조회 불가 — 게시판에서 직접 확인 · 독도 일정도 게시판에 있음</div>
             <div class="go">운항일정 게시판 바로가기 →</div>
           </a>
         </div>
@@ -433,6 +433,14 @@ footer.note{text-align:center;color:var(--steel);font-size:12px;margin-top:26px;
           </div>
         </div>
         <div class="hint" id="mixHint" style="display:none;margin-bottom:12px;">가는편·오는편 선사가 달라 두 선사 왕복 요금의 평균으로 계산합니다.</div>
+
+        <div class="field-row" style="grid-template-columns:1fr;">
+          <div class="field">
+            <label for="dokdoTime">독도 탐방 시간 (선택)</label>
+            <input id="dokdoTime" type="time">
+            <span class="hint" style="margin-top:2px;">위 선사 페이지에 독도 운항 일정도 함께 나와 있습니다. 시간을 고르면 '독도 코스 포함'이 자동 체크되고 견적서 일정표에 표시됩니다.</span>
+          </div>
+        </div>
 
         <h3 class="sub">③ 일자 · 시즌</h3>
         <div class="field-row">
@@ -953,7 +961,7 @@ function render(){
 /* ============================================================
    일정표
    ============================================================ */
-function buildItineraryRows(nights, tour, dokdo, snorkel){
+function buildItineraryRows(nights, tour, dokdo, snorkel, dokdoTime){
   const tourWord = {bus:'버스투어', taxi:'택시투어', combi:'콤비투어', rent:'렌터카'}[tour] || '투어';
   const rows = [];
   rows.push(['1일차','오전','승선권 수령 및 승선','']);
@@ -965,7 +973,7 @@ function buildItineraryRows(nights, tour, dokdo, snorkel){
   rows.push(['1일차','','석식','']);
   rows.push(['2일차','오전','조식','']);
   if(dokdo){
-    rows.push(['2일차','','◆ 우리땅 독도 탐방','기상에 따라 변경']);
+    rows.push(['2일차', dokdoTime||'', '◆ 우리땅 독도 탐방'+(dokdoTime?` (${dokdoTime} 출항)`:''), '기상에 따라 변경']);
   } else if(nights===2){
     rows.push(['2일차','','◆ 선택관광 or 자유일정','']);
   }
@@ -1073,8 +1081,10 @@ function generateQuote(fromSticky){
   const paxLines = q.lines.map(l=>`   - ${l.label} ${l.c}명 × 1인 ${fmt(l.unit)} = ${fmt(l.sub)}`);
   if(q.lodgeExtra>0) paxLines.push(`   - 숙소 추가요금 = ${fmt(q.lodgeExtra)}`);
 
-  const rows = buildItineraryRows(q.nights, q.tour, q.dokdo, q.snorkel);
+  const dokdoTime = $('dokdoTime').value;
+  const rows = buildItineraryRows(q.nights, q.tour, q.dokdo, q.snorkel, dokdoTime);
   const tourFull = TOUR_LABEL[q.tour] + (q.snorkel?'+스노클링':'');
+  const dokdoWord = q.dokdo ? ` + 독도 탐방${dokdoTime?`(${dokdoTime} 출항)`:''}` : '';
 
   const text =
 `현지 여행사 굿투어  ${shipText(q.ships)}   울릉도여행 일정 및 견적서
@@ -1084,7 +1094,7 @@ function generateQuote(fromSticky){
 1. 건   명 : ${custName}님 ${teamPax}인팀 ${shipText(q.ships)} ${tourFull}${q.dokdo?'+독도':''}
 2. 기   간 : ${fmtDate(startDate)} ~ ${fmtDate(endDate)} (${q.nights===1?'1박2일':'2박3일'} · ${seasonWord})
 3. 제   공 : 굿투어주식회사(사업자: 506-81-87523) / 계좌: 농협 351-0693-3158-03
-4. 포   함 : 왕복승선권 + ${lodgeText(q.lodgings)} + ${tourFull}${q.dokdo?' + 독도 탐방':''}
+4. 포   함 : 왕복승선권 + ${lodgeText(q.lodgings)} + ${tourFull}${dokdoWord}
 5. 청구금 : 총금액 ${fmt(q.total)} ${numToKorean(q.total)}정
 ${paxLines.join('\n')}
    * 카드/현금영수증 시 부가세 10% 별도 발생됩니다. 계약금은 1인당 ${fmt(DEPOSIT_PER_PERSON)}, 총 ${fmt(deposit)}입니다.
@@ -1106,7 +1116,7 @@ ${rowsToTabText(rows)}
     `<b>1. 건   명</b> : ${esc(custName)}님 ${teamPax}인팀 ${shipText(q.ships)} ${tourFull}${q.dokdo?'+독도':''}\n`+
     `<b>2. 기   간</b> : ${fmtDate(startDate)} ~ ${fmtDate(endDate)}  (${q.nights===1?'1박2일':'2박3일'} · ${seasonWord})\n`+
     `<b>3. 제   공</b> : 굿투어주식회사(사업자: 506-81-87523) / 계좌: 농협 351-0693-3158-03\n`+
-    `<b>4. 포   함</b> : 왕복승선권 + ${esc(lodgeText(q.lodgings))} + ${tourFull}${q.dokdo?' + 독도 탐방':''}\n`+
+    `<b>4. 포   함</b> : 왕복승선권 + ${esc(lodgeText(q.lodgings))} + ${tourFull}${dokdoWord}\n`+
     `<b>5. 청구금</b> : 총 <b>${fmt(q.total)}</b> (${numToKorean(q.total)}정)\n`+
     paxHtml + `\n`+
     `     계약금 1인당 ${fmt(DEPOSIT_PER_PERSON)}, 총 ${fmt(deposit)} · 카드/현금영수증 시 부가세 10% 별도`;
@@ -1137,6 +1147,7 @@ function collectForm(){
     startDate: $('startDate').value,
     tourSel: $('tourSel').value,
     dokdo: $('dokdoChk').checked,
+    dokdoTime: $('dokdoTime').value,
     snorkel: $('snorkelChk').checked,
     lodgings: getLodgings(),
     teamCount: $('teamCount').value,
@@ -1160,6 +1171,7 @@ function applyForm(f){
   $('startDate').value = f.startDate||'';
   $('tourSel').value = f.tourSel||'bus';
   $('dokdoChk').checked = !!f.dokdo;
+  $('dokdoTime').value = f.dokdoTime||'';
   $('snorkelChk').checked = !!f.snorkel;
   setLodgings(f.lodgings);
   TIERS.forEach(t=>{
@@ -1282,6 +1294,15 @@ $('custName').addEventListener('input', ()=>{
   if($('custName').value.trim()) $('f_custName').classList.remove('error');
 });
 
+/* 독도 탐방 시간: 시간을 고르면 독도 코스 자동 체크 */
+$('dokdoTime').addEventListener('change', ()=>{
+  if($('dokdoTime').value && !$('dokdoChk').checked){
+    $('dokdoChk').checked = true;
+    toast('독도 코스 포함이 자동으로 체크되었습니다');
+  }
+  render();
+});
+
 $('teamCount').addEventListener('input', ()=>{
   const raw = $('teamCount').value.trim();
   const v = parseInt(raw,10);
@@ -1349,6 +1370,7 @@ $('resetBtn').addEventListener('click', ()=>{
   $('endDate').value='';
   $('tourSel').value='bus';
   $('dokdoChk').checked=false;
+  $('dokdoTime').value='';
   $('snorkelChk').checked=false;
   setLodgings([]);
   TIERS.forEach(t=>{
