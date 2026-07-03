@@ -538,7 +538,7 @@ footer.note{text-align:center;color:var(--steel);font-size:12px;margin-top:26px;
             <select id="tourSel"></select>
           </div>
           <div class="field" id="tourPriceField">
-            <label for="tourPrice">투어 요금 (총액) <span class="badge-auto">수정 가능</span></label>
+            <label for="tourPrice" id="tourPriceLabel">투어 요금 (총액) <span class="badge-auto">수정 가능</span></label>
             <input id="tourPrice" type="number" min="0" step="1000" inputmode="numeric">
           </div>
         </div>
@@ -706,6 +706,8 @@ const shortShip = k => SHIP_LABEL[k].split(' (')[0];
 /* 투어 방법 7종 (자유렌트는 차종별) */
 const TOUR_ORDER = ['bus','taxi','starex','combi','bus25','bus35','rent'];
 const TOUR_LABEL = {bus:'버스투어', taxi:'택시투어', starex:'스타렉스투어', combi:'단독콤비투어', bus25:'단독25인승', bus35:'단독35인승', rent:'자유렌트'};
+/* 과금 방식: pp=1인당 일괄, total=팀 총액÷인원 */
+const TOUR_MODE  = {bus:'pp', taxi:'total', starex:'total', combi:'total', bus25:'total', bus35:'total', rent:'total'};
 const RENT_ORDER = ['small','sedan','suv','starex'];
 const RENT_LABEL = {small:'소형', sedan:'승용', suv:'SUV', starex:'스타렉스'};
 const SEASON_LABEL = ['주중','주말','성수기'];
@@ -729,14 +731,14 @@ const LODGE_TYPES = ['모텔','호텔','리조트','펜션'];
 
 /* ---- 편집 가능한 기본 요금(고정값이되 화면에서 수정 가능, localStorage에 별도 저장) ---- */
 const DEFAULT_SHIP_FARE  = {crz:190000, poh:175000, muk:160000}; /* 대인 왕복 승선권(1인) */
-const DEFAULT_TOUR_PRICE = {bus:300000, taxi:300000, starex:350000, combi:400000, bus25:500000, bus35:600000, rent:0}; /* 투어 총액(단독/전세 1팀 기준) */
+const DEFAULT_TOUR_PRICE = {bus:38000, taxi:300000, starex:350000, combi:400000, bus25:500000, bus35:600000, rent:0}; /* bus=1인당, 나머지=팀 총액 */
 const DEFAULT_RENT_PRICE = {small:90000, sedan:110000, suv:150000, starex:200000}; /* 자유렌트 차종별 총액 */
 const DEFAULT_DOKDO_FARE = 55000; /* 독도 1인 추가요금 */
 const DEFAULT_FUEL_FARE  = 0;     /* 유류할증료(1인) — 고정값, 화면에서 수정 시 유지 */
 
 const DRAFT_KEY = 'gt_quote_draft_v5';
 const HIST_KEY  = 'gt_quote_hist_v5';
-const PRICE_KEY = 'gt_price_cfg_v5';
+const PRICE_KEY = 'gt_price_cfg_v6'; /* v6: bus가 1인당 요금으로 변경 */
 
 let season = 0;
 let seasonIsAuto = true;
@@ -983,11 +985,15 @@ function computeQuote(){
   TIERS.forEach(t=>{ counts[t.key] = Math.max(0, parseInt($(`cnt_${t.key}`).value,10)||0); });
   const totalPax = Object.values(counts).reduce((a,b)=>a+b,0);
 
-  /* 승선권(대인 1인) + 유류할증료(1인, 할인 없음) + 투어 1인당(총액÷인원) */
+  /* 승선권(대인 1인) + 유류할증료(1인, 할인 없음) + 투어 */
   const shipFare = Math.max(0, parseInt($('shipFare').value,10)||0);
   const fuelFare = Math.max(0, parseInt($('fuelFare').value,10)||0);
-  const tourTotal = tourTotalPrice();
-  const tourPP = totalPax>0 ? round100(tourTotal/totalPax) : 0;
+  /* 투어 과금: pp=1인당 일괄(버스투어), total=팀 총액÷인원 */
+  const tourMode = tour==='rent' ? 'total' : (TOUR_MODE[tour]||'total');
+  const tourPrice = tourTotalPrice();
+  let tourPP, tourTotal;
+  if(tourMode==='pp'){ tourPP = tourPrice; tourTotal = tourPrice * totalPax; }
+  else { tourTotal = tourPrice; tourPP = totalPax>0 ? round100(tourTotal/totalPax) : 0; }
 
   let total = 0;
   const lines = [];
@@ -1027,7 +1033,7 @@ function computeQuote(){
   const dispNights = nights + (cruiseNight ? 1 : 0);
 
   return {ships, nights, dispNights, cruiseNight, tour, rentVeh, dokdo, season, counts, totalPax, total, lines,
-          lodgings, lodgeExtra, shipFare, fuelFare, tourTotal, tourPP, dokdoShip, dokdoPax, dokdoFare, dokdoSub,
+          lodgings, lodgeExtra, shipFare, fuelFare, tourMode, tourTotal, tourPP, dokdoShip, dokdoPax, dokdoFare, dokdoSub,
           dokdoPartial: dokdo && dokdoPax !== totalPax};
 }
 
@@ -1077,13 +1083,20 @@ function render(){
   $('cruiseHint').style.display = q.cruiseNight ? 'block' : 'none';
   $('shipInBadge').style.display = shipInSync ? 'inline-block' : 'none';
 
-  /* 투어: 자유렌트면 차종 행 표시, 투어요금 입력칸 숨김 */
+  /* 투어: 자유렌트면 차종 행 표시, 투어요금 입력칸 숨김. 과금 방식별 라벨·힌트 */
   const isRent = q.tour==='rent';
   $('rentRow').style.display = isRent ? 'grid' : 'none';
   $('tourPriceField').style.display = isRent ? 'none' : 'flex';
-  $('tourPPHint').innerHTML = q.totalPax>0
-    ? `${TOUR_LABEL[q.tour]}${isRent?` · ${RENT_LABEL[q.rentVeh]||''}`:''} 총액 <b>${fmt(q.tourTotal)}</b> ÷ ${q.totalPax}명 = <b>1인당 ${fmt(q.tourPP)}</b>`
-    : `투어 요금은 팀 전체 총액입니다. 1인당 = 총액 ÷ 인원으로 자동 계산됩니다.`;
+  $('tourPriceLabel').innerHTML = (q.tourMode==='pp' ? '투어 요금 (1인당)' : '투어 요금 (총액)') + ' <span class="badge-auto">수정 가능</span>';
+  if(q.totalPax<=0){
+    $('tourPPHint').innerHTML = q.tourMode==='pp'
+      ? `투어 요금이 1인당 일괄 적용됩니다.`
+      : `투어 요금은 팀 전체 총액입니다. 1인당 = 총액 ÷ 인원으로 자동 계산됩니다.`;
+  } else if(q.tourMode==='pp'){
+    $('tourPPHint').innerHTML = `${TOUR_LABEL[q.tour]} <b>1인당 ${fmt(q.tourPP)}</b> × ${q.totalPax}명 = 총액 <b>${fmt(q.tourTotal)}</b>`;
+  } else {
+    $('tourPPHint').innerHTML = `${TOUR_LABEL[q.tour]}${isRent?` · ${RENT_LABEL[q.rentVeh]||''}`:''} 총액 <b>${fmt(q.tourTotal)}</b> ÷ ${q.totalPax}명 = <b>1인당 ${fmt(q.tourPP)}</b>`;
+  }
 
   /* 독도 컨트롤: 선박 미선택이면 시간대·시간·인원·요금 비활성화 */
   const dokdoOn = !!q.dokdoShip;
@@ -1281,7 +1294,10 @@ function generateQuote(fromSticky){
   const paxLines = q.lines.map(l=>`   - ${l.label} ${l.c}명 × 1인 ${fmt(l.unit)} = ${fmt(l.sub)}`);
   if(q.lodgeExtra>0) paxLines.push(`   - 숙소 추가요금 = ${fmt(q.lodgeExtra)}`);
   const tourName = TOUR_LABEL[q.tour] + (q.tour==='rent' ? `(${RENT_LABEL[q.rentVeh]||''})` : '');
-  paxLines.push(`   * 투어: ${tourName} 총액 ${fmt(q.tourTotal)} (1인당 ${fmt(q.tourPP)}, 승선권에 합산 반영)`);
+  const tourNote = q.tourMode==='pp'
+    ? `   * 투어: ${tourName} 1인당 ${fmt(q.tourPP)} × ${q.totalPax}명 = ${fmt(q.tourTotal)} (승선권에 합산 반영)`
+    : `   * 투어: ${tourName} 총액 ${fmt(q.tourTotal)} (1인당 ${fmt(q.tourPP)}, 승선권에 합산 반영)`;
+  paxLines.push(tourNote);
   if(q.fuelFare>0) paxLines.push(`   * 유류할증료 1인 ${fmt(q.fuelFare)} 포함`);
 
   const dokdoTime = dokdoTimeStr();
@@ -1322,7 +1338,9 @@ ${rowsToTabText(rows)}
   $('d_tel').textContent = staffTel || '-';
   const paxHtml = q.lines.map(l=>`   - ${l.label} ${l.c}명 × 1인 ${fmt(l.unit)} = <b>${fmt(l.sub)}</b>`).join('\n')
     + (q.lodgeExtra>0 ? `\n   - 숙소 추가요금 = <b>${fmt(q.lodgeExtra)}</b>` : '')
-    + `\n   * 투어: ${esc(tourName)} 총액 ${fmt(q.tourTotal)} (1인당 ${fmt(q.tourPP)})`
+    + (q.tourMode==='pp'
+        ? `\n   * 투어: ${esc(tourName)} 1인당 ${fmt(q.tourPP)} × ${q.totalPax}명 = ${fmt(q.tourTotal)}`
+        : `\n   * 투어: ${esc(tourName)} 총액 ${fmt(q.tourTotal)} (1인당 ${fmt(q.tourPP)})`)
     + (q.fuelFare>0 ? `\n   * 유류할증료 1인 ${fmt(q.fuelFare)} 포함` : '');
   $('d_summary').innerHTML =
     `<b>1. 건   명</b> : ${esc(custName)}님 ${teamPax}인팀 ${shipText(q.ships)} ${tourFull}${q.dokdo?'+독도':''}\n`+
