@@ -63,7 +63,17 @@ svg.ic{width:16px;height:16px;flex-shrink:0;fill:none;stroke:currentColor;stroke
 .sb-section{
   background:#fff;border:1px solid var(--border);border-radius:12px;padding:6px;
   box-shadow:0 1px 2px rgba(16,24,40,.06),0 8px 16px -12px rgba(16,24,40,.18);
+  margin-bottom:12px;
 }
+.sb-head{
+  display:flex;align-items:center;gap:10px;padding:10px 13px;margin:-6px -6px 6px;
+  border-bottom:1px solid var(--border);border-radius:11px 11px 0 0;
+  font-weight:800;font-size:13.5px;color:var(--ink);
+  background:linear-gradient(180deg,#FBFCFE,#F4F6FA);
+}
+.sb-head .ic{width:18px;height:18px;stroke-width:2;}
+.sb-head:hover{color:var(--blue-dark);}
+.sb-head.active{color:var(--blue-dark);background:var(--blue-bg);box-shadow:inset 3px 0 0 var(--blue);}
 .sb-item{
   display:flex;align-items:center;gap:10px;padding:9px 11px;border-radius:8px;color:var(--muted);
   font-weight:600;font-size:13.5px;margin-bottom:1px;position:relative;
@@ -573,17 +583,17 @@ function suggestStatus(res,newStatus,msg){
    라우터 & 셸
    ============================================================ */
 const NAV=[
-  {group:'운영'},
+  {sec:true},
   {id:'dashboard',label:'대시보드',icon:'grid',route:'#/'},
-  {id:'customers',label:'고객',icon:'users',route:'#/customers'},
+  {sec:true, head:{id:'customers',label:'고객',icon:'users',route:'#/customers'}},
   {id:'consultations',label:'상담',icon:'chat',route:'#/consultations'},
-  {id:'quotes',label:'견적',icon:'doc',route:'#/quotes'},
-  {id:'reservations',label:'예약',icon:'calendar',route:'#/reservations'},
-  {group:'정산·소통'},
+  {id:'quote_new',label:'자동견적',icon:'plus',route:'#/quotes/new'},
+  {id:'quotes',label:'견적내역',icon:'doc',route:'#/quotes'},
+  {id:'reservations',label:'예약/문자',icon:'calendar',route:'#/reservations'},
+  {sec:true, label:'회계'},
   {id:'payments',label:'입금/정산',icon:'card',route:'#/payments'},
-  {id:'sms',label:'문자',icon:'message',route:'#/sms'},
   {id:'analytics',label:'매출분석',icon:'chart',route:'#/analytics'},
-  {group:'관리'},
+  {sec:true, label:'관리'},
   {id:'settings',label:'설정',icon:'gear',route:'#/settings'},
 ];
 
@@ -597,7 +607,10 @@ function nav(route){ location.hash=route; }
 function activeNavId(){
   const {seg}=parseHash();
   if(seg.length===0) return 'dashboard';
-  return seg[0];
+  const r=seg[0];
+  if(r==='quotes'){ const sub=(seg[1]||'').split('?')[0]; return sub==='new'?'quote_new':'quotes'; }
+  if(r==='sms') return 'reservations'; /* 문자 화면은 예약/문자 메뉴에 귀속 */
+  return r;
 }
 
 function boot(){
@@ -636,9 +649,11 @@ function renderShell(app){
   const act=activeNavId();
   let navHtml=''; let openSec=false;
   NAV.forEach(n=>{
-    if(n.group){
+    if(n.sec){
       if(openSec) navHtml+='</div>';
-      navHtml+=`<div class="sb-group">${n.group}</div><div class="sb-section">`;
+      if(n.label) navHtml+=`<div class="sb-group">${n.label}</div>`;
+      navHtml+='<div class="sb-section">';
+      if(n.head){ const h=n.head; navHtml+=`<a class="sb-head ${act===h.id?'active':''}" href="${h.route}" onclick="closeSidebar()">${ic(h.icon)}<span>${h.label}</span></a>`; }
       openSec=true; return;
     }
     let badge='';
@@ -1451,7 +1466,10 @@ function renderReservations(el){
   el.innerHTML=`
   <div class="page-head">
     <div><h1>예약관리</h1><div class="sub">전체 ${DB.reservations.length}건 · 표시 <span id="res-cnt">${list.length}</span>건</div></div>
-    <div class="actions"><div style="position:relative;">${ic('search','si')}<input style="height:38px;border:1px solid var(--border);border-radius:9px;width:240px;padding:0 12px 0 38px;" placeholder="예약번호·고객명 검색" value="${_resQ}" oninput="resSearch(this.value)"></div></div>
+    <div class="actions">
+      <div style="position:relative;">${ic('search','si')}<input style="height:38px;border:1px solid var(--border);border-radius:9px;width:240px;padding:0 12px 0 38px;" placeholder="예약번호·고객명 검색" value="${_resQ}" oninput="resSearch(this.value)"></div>
+      <a class="btn" href="#/sms">${ic('message','ic')} 문자관리</a>
+    </div>
   </div>
   <div class="filter-tabs">${RES_FILTERS.map(f=>`<div class="filter-tab ${_resFilter===f[0]?'active':''}" onclick="_resFilter='${f[0]}';renderReservations(document.getElementById('content'))">${f[1]}<span class="cnt">${DB.reservations.filter(f[2]).length}</span></div>`).join('')}</div>
   <div id="res-tbl">${resTableCard(list)}</div>`;
