@@ -47,6 +47,61 @@ body{
   padding-bottom:calc(84px + env(safe-area-inset-bottom));
 }
 .wrap{max-width:1180px;margin:0 auto;padding:16px 14px 40px;}
+
+/* ===== 관리자 탭 셸 ===== */
+.tabnav{
+  position:sticky;top:0;z-index:80;background:var(--sea-deep);
+  display:flex;gap:2px;padding:8px 10px calc(8px + env(safe-area-inset-bottom,0));
+  overflow-x:auto;-webkit-overflow-scrolling:touch;
+}
+.tabnav button{
+  border:none;background:transparent;color:var(--on-dark-muted);
+  font-family:inherit;font-size:14px;font-weight:700;padding:11px 16px;border-radius:9999px;
+  cursor:pointer;white-space:nowrap;display:flex;align-items:center;gap:7px;transition:.15s;
+}
+.tabnav button .tn-num{
+  width:20px;height:20px;border-radius:50%;background:rgba(255,255,255,.14);color:var(--on-dark-muted);
+  font-size:11px;display:flex;align-items:center;justify-content:center;flex-shrink:0;
+}
+.tabnav button.active{background:var(--wave-green);color:var(--sea-deep);}
+.tabnav button.active .tn-num{background:var(--sea-deep);color:var(--wave-green);}
+.tabpanel{display:none;}
+.tabpanel.active{display:block;}
+body.customer-view .tabnav{display:none;}
+
+/* ===== 사전정보 · 예약관리 공통 ===== */
+.admin-wrap{max-width:1180px;margin:0 auto;padding:20px 14px 60px;}
+@media(min-width:961px){ .admin-wrap{padding:28px 20px 80px;} }
+.panel-hero{
+  background:linear-gradient(135deg,var(--sea-deep) 0%,#06344c 60%,#0a4a63 100%);
+  border-radius:var(--radius);padding:22px 22px 24px;color:var(--on-dark);margin-bottom:16px;
+}
+.panel-hero .eyebrow{font-size:11px;letter-spacing:1.6px;text-transform:uppercase;color:var(--wave-green);font-weight:700;margin-bottom:7px;}
+.panel-hero h1{font-size:22px;margin:0 0 6px;font-weight:700;letter-spacing:-.4px;}
+.panel-hero p{margin:0;color:var(--on-dark-muted);font-size:13px;line-height:1.6;max-width:600px;}
+
+.share-box{margin-top:12px;background:var(--wave-green-bg);border:1px solid var(--wave-green-soft);border-radius:10px;padding:12px 14px;display:none;}
+.share-box.show{display:block;}
+.share-box textarea{width:100%;min-height:70px;border:1.5px solid var(--hairline-strong);border-radius:8px;padding:10px;font-family:inherit;font-size:12.5px;color:var(--ink);background:var(--canvas);resize:vertical;}
+
+/* 예약 관리 테이블 */
+.rsv-toolbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:14px;}
+.rsv-toolbar input.rsv-search{flex:1;min-width:160px;border:1.5px solid var(--hairline-strong);border-radius:10px;height:44px;padding:0 12px;font-family:inherit;font-size:14px;color:var(--ink);outline:none;}
+.rsv-table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;border:1px solid var(--hairline);border-radius:var(--radius);background:var(--canvas);}
+table.rsv{width:100%;border-collapse:collapse;font-size:13px;min-width:820px;}
+table.rsv th{background:var(--surface-soft);color:var(--slate);font-weight:700;font-size:11.5px;text-align:left;padding:11px 10px;border-bottom:1px solid var(--hairline);white-space:nowrap;}
+table.rsv td{padding:11px 10px;border-bottom:1px solid var(--hairline-soft);vertical-align:middle;}
+table.rsv tr:last-child td{border-bottom:none;}
+table.rsv .rsv-amt{font-variant-numeric:tabular-nums;font-weight:700;color:var(--wave-green-dark);white-space:nowrap;}
+table.rsv select.rsv-status{border:1.5px solid var(--hairline);border-radius:8px;padding:5px 8px;font-family:inherit;font-size:12px;font-weight:700;-webkit-appearance:none;appearance:none;}
+table.rsv select.rsv-status[data-s="확정"]{color:var(--wave-green-dark);background:var(--wave-green-bg);}
+table.rsv select.rsv-status[data-s="대기"]{color:var(--warn-text);background:var(--warn-bg);}
+table.rsv select.rsv-status[data-s="취소"]{color:var(--danger);background:#fdeaea;}
+table.rsv input.rsv-memo{border:1px solid var(--hairline);border-radius:8px;padding:6px 8px;font-family:inherit;font-size:12.5px;width:100%;min-width:120px;outline:none;}
+table.rsv .rsv-act{border:none;background:none;cursor:pointer;font-size:12.5px;font-weight:700;padding:5px 6px;border-radius:6px;}
+table.rsv .rsv-act.load{color:var(--wave-green-dark);}
+table.rsv .rsv-act.del{color:var(--danger);}
+.rsv-empty{padding:40px 16px;text-align:center;color:var(--stone);font-size:13.5px;}
 @media(min-width:961px){ .wrap{padding:28px 20px 60px;} body{padding-bottom:0;} }
 
 header.top{
@@ -418,7 +473,85 @@ footer.note{text-align:center;color:var(--steel);font-size:12px;margin-top:26px;
 </style>
 </head>
 <body>
-<div class="wrap">
+
+<nav class="tabnav" id="tabnav">
+  <button type="button" data-tab="intake"><span class="tn-num">1</span>고객 사전정보</button>
+  <button type="button" data-tab="quote" class="active"><span class="tn-num">2</span>견적 계산</button>
+  <button type="button" data-tab="reserve"><span class="tn-num">3</span>예약 관리</button>
+</nav>
+
+<!-- ================= TAB 1 : 고객 사전정보 입력 ================= -->
+<div id="tab-intake" class="tabpanel">
+  <div class="admin-wrap">
+    <div class="panel-hero">
+      <div class="eyebrow">GOOD TOUR · 사전 정보</div>
+      <h1>울릉도 여행 사전 정보 입력</h1>
+      <p>아래 내용을 간단히 채워주시면 담당자가 맞춤 견적을 준비해 드립니다. 정확한 금액·일정은 담당자가 확인 후 안내드립니다.</p>
+    </div>
+
+    <div class="card">
+      <h2><span class="num">1</span>연락 정보</h2>
+      <div class="field-row">
+        <div class="field"><label for="in_name">성함</label><input id="in_name" placeholder="예: 홍길동" autocomplete="off"></div>
+        <div class="field"><label for="in_tel">연락처</label><input id="in_tel" placeholder="010-0000-0000" inputmode="tel" autocomplete="off"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2><span class="num">2</span>희망 일정</h2>
+      <div class="field-row">
+        <div class="field"><label for="in_date">희망 출발일</label><input id="in_date" type="date"></div>
+        <div class="field"><label for="in_nights">일정</label>
+          <select id="in_nights"><option value="1">1박 2일</option><option value="2">2박 3일</option><option value="">미정</option></select>
+        </div>
+      </div>
+      <div class="field-row">
+        <div class="field"><label for="in_port">출발 선호 항구</label>
+          <select id="in_port"><option value="">상관없음</option><option>포항</option><option>묵호</option></select>
+        </div>
+        <div class="field"><label for="in_dokdo">독도 탐방</label>
+          <select id="in_dokdo"><option value="">미정</option><option>희망</option><option>불필요</option></select>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2><span class="num">3</span>인원 · 선호</h2>
+      <div class="field-row">
+        <div class="field"><label for="in_pax">총 인원</label><input id="in_pax" type="number" min="1" value="2" inputmode="numeric"></div>
+        <div class="field"><label for="in_tour">투어 선호</label>
+          <select id="in_tour"><option value="">상관없음</option><option>버스투어</option><option>택시투어</option><option>렌트</option></select>
+        </div>
+      </div>
+      <div class="field-row">
+        <div class="field"><label for="in_lodge">숙소 선호</label>
+          <select id="in_lodge"><option value="">상관없음</option><option>모텔</option><option>호텔</option><option>펜션</option><option>리조트</option></select>
+        </div>
+        <div class="field"><label for="in_budget">1인 예산(선택)</label><input id="in_budget" placeholder="예: 40만원" autocomplete="off"></div>
+      </div>
+      <div class="field" style="margin-top:4px;">
+        <label for="in_memo">요청사항</label>
+        <input id="in_memo" placeholder="예: 어르신 동반, 멀미약 필요 등" autocomplete="off">
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="btnbar">
+        <button class="btn primary" id="intakeSubmitBtn" style="background:var(--wave-green-dark);color:#fff;">제출 · 담당자에게 전달할 링크 만들기</button>
+      </div>
+      <div class="share-box" id="intakeShare">
+        <div style="font-size:12.5px;font-weight:700;color:var(--wave-green-dark);margin-bottom:8px;">✓ 접수되었습니다. 아래 링크(또는 내용)를 담당자에게 보내주세요.</div>
+        <textarea id="intakeShareText" readonly></textarea>
+        <div class="btnbar" style="margin-top:10px;">
+          <button class="btn light" id="intakeCopyBtn">링크 복사</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ================= TAB 2 : 견적 계산 (기존) ================= -->
+<div class="wrap tabpanel active" id="tab-quote">
 
   <header class="top">
     <div class="eyebrow">GOOD TOUR · 울릉도 견적 계산기 v4</div>
@@ -775,6 +908,36 @@ footer.note{text-align:center;color:var(--steel);font-size:12px;margin-top:26px;
     가격은 내부 견적 계산기 기준 표준가이며, 실제 청구금액은 협의에 따라 조정될 수 있습니다.<br>
     굿투어주식회사 · 사업자 506-81-87523 · 계좌 농협 351-0693-3158-03
   </footer>
+</div>
+
+<!-- ================= TAB 3 : 예약 관리 ================= -->
+<div id="tab-reserve" class="tabpanel">
+  <div class="admin-wrap">
+    <div class="panel-hero">
+      <div class="eyebrow">GOOD TOUR · 예약 관리</div>
+      <h1>예약 고객 데이터 관리</h1>
+      <p>견적 계산 탭에서 만든 견적을 예약으로 저장하고, 상태(대기·확정·취소)와 메모를 관리합니다. 데이터는 이 브라우저에 저장됩니다.</p>
+    </div>
+
+    <div class="rsv-toolbar">
+      <input class="rsv-search" id="rsvSearch" placeholder="고객명·연락처·선박 검색" autocomplete="off">
+      <button class="btn light" id="rsvAddFromQuote" style="flex:0;min-width:auto;padding:11px 16px;font-size:13px;">＋ 현재 견적을 예약으로 저장</button>
+      <button class="btn light" id="rsvExportBtn" style="flex:0;min-width:auto;padding:11px 16px;font-size:13px;">CSV 내보내기</button>
+    </div>
+
+    <div class="rsv-table-wrap">
+      <table class="rsv">
+        <thead>
+          <tr>
+            <th>접수일</th><th>고객명</th><th>연락처</th><th>일정</th><th>선박</th>
+            <th>인원</th><th>금액</th><th>상태</th><th>메모</th><th></th>
+          </tr>
+        </thead>
+        <tbody id="rsvBody"></tbody>
+      </table>
+    </div>
+    <div class="rsv-empty" id="rsvEmpty" style="display:none;">저장된 예약이 없습니다. 견적 계산 탭에서 견적을 만든 뒤 ‘현재 견적을 예약으로 저장’을 눌러보세요.</div>
+  </div>
 </div>
 
 <div class="stickybar" id="stickybar">
@@ -2083,6 +2246,142 @@ updateSeasonPills();
 renderHistory();
 savedCfgJSON = JSON.stringify(CFG); updateDirty(); /* 로드 직후는 '저장됨' 상태 */
 render();
+
+/* ============================================================
+   관리자 탭 셸 · 사전정보(탭1) · 예약관리(탭3)
+   ============================================================ */
+const RSV_KEY = 'gt_reservations_v1';
+
+function switchTab(name){
+  document.querySelectorAll('.tabnav button').forEach(b=> b.classList.toggle('active', b.dataset.tab===name));
+  ['intake','quote','reserve'].forEach(t=> $('tab-'+t).classList.toggle('active', t===name));
+  $('stickybar').style.display = name==='quote' ? '' : 'none';
+  if(name==='reserve') renderReservations();
+  window.scrollTo({top:0});
+  try{ localStorage.setItem('gt_active_tab', name); }catch(e){}
+}
+document.querySelectorAll('.tabnav button').forEach(b=> b.addEventListener('click', ()=> switchTab(b.dataset.tab)));
+
+/* ---- 사전정보: 제출 → 담당자 전달용 링크/텍스트 ---- */
+function collectIntake(){
+  return { name:$('in_name').value.trim(), tel:$('in_tel').value.trim(), date:$('in_date').value,
+    nights:$('in_nights').value, port:$('in_port').value, dokdo:$('in_dokdo').value,
+    pax:$('in_pax').value, tour:$('in_tour').value, lodge:$('in_lodge').value,
+    budget:$('in_budget').value.trim(), memo:$('in_memo').value.trim(), ts:Date.now() };
+}
+function encodeIntake(o){ try{ return btoa(unescape(encodeURIComponent(JSON.stringify(o)))); }catch(e){ return ''; } }
+function decodeIntake(s){ try{ return JSON.parse(decodeURIComponent(escape(atob(s)))); }catch(e){ return null; } }
+const nightsLabel = n => n==='1'?'1박2일':n==='2'?'2박3일':'미정';
+$('intakeSubmitBtn').addEventListener('click', ()=>{
+  const o = collectIntake();
+  if(!o.name){ toast('성함을 입력해주세요', true); return; }
+  const link = location.origin + location.pathname + '#load=' + encodeIntake(o);
+  $('intakeShareText').value =
+    `[울릉도 여행 사전정보]\n성함: ${o.name}\n연락처: ${o.tel||'-'}\n`+
+    `희망출발: ${o.date||'미정'} (${nightsLabel(o.nights)})\n인원: ${o.pax||'-'}명 · 항구: ${o.port||'상관없음'} · 독도: ${o.dokdo||'미정'}\n`+
+    `투어: ${o.tour||'상관없음'} · 숙소: ${o.lodge||'상관없음'} · 예산: ${o.budget||'-'}\n요청: ${o.memo||'-'}\n\n담당자 열람용 링크:\n${link}`;
+  $('intakeShare').classList.add('show');
+  $('intakeShare').scrollIntoView({behavior:'smooth', block:'center'});
+});
+$('intakeCopyBtn').addEventListener('click', async ()=>{
+  const ok = await copyToClipboard($('intakeShareText').value);
+  toast(ok ? '복사되었습니다 · 담당자에게 보내주세요' : '복사 실패 — 내용을 길게 눌러 복사하세요', !ok);
+});
+function applyIntakeToQuote(o){
+  if(o.name) $('custName').value = o.name;
+  if(o.date) $('startDate').value = o.date;
+  if(o.nights) $('daySel').value = o.nights;
+  if(o.port==='포항') $('shipOut').value='crz'; else if(o.port==='묵호') $('shipOut').value='muk';
+  const pax = parseInt(o.pax,10);
+  if(pax>0){ $('cnt_adult').value = pax; ['cnt_d50','cnt_d20','cnt_d10'].forEach(id=>$(id).value=0); }
+  loadShipFareInput(); syncEndDate(); render();
+  switchTab('quote');
+  toast(`${o.name||'고객'} 사전정보를 견적에 불러왔습니다`);
+}
+
+/* ---- 예약 관리 ---- */
+function getReservations(){ try{ return JSON.parse(localStorage.getItem(RSV_KEY)||'[]'); }catch(e){ return []; } }
+function setReservations(a){ try{ localStorage.setItem(RSV_KEY, JSON.stringify(a)); }catch(e){} }
+function renderReservations(){
+  const q = ($('rsvSearch').value||'').trim().toLowerCase();
+  let list = getReservations();
+  if(q) list = list.filter(r => `${r.name} ${r.tel} ${r.ship}`.toLowerCase().includes(q));
+  const tb = $('rsvBody'); tb.innerHTML='';
+  $('rsvEmpty').style.display = list.length ? 'none' : 'block';
+  const STATUS = ['대기','확정','취소'];
+  list.forEach(r=>{
+    const idx = getReservations().findIndex(x=>x.id===r.id);
+    const d = new Date(r.ts);
+    const tr = document.createElement('tr');
+    tr.innerHTML =
+      `<td style="white-space:nowrap;color:var(--steel);">${d.getFullYear()}.${d.getMonth()+1}.${d.getDate()}</td>`+
+      `<td style="font-weight:700;">${esc(r.name||'-')}</td>`+
+      `<td style="white-space:nowrap;">${esc(r.tel||'-')}</td>`+
+      `<td style="white-space:nowrap;">${esc(r.nights||'-')}</td>`+
+      `<td style="white-space:nowrap;">${esc(r.ship||'-')}</td>`+
+      `<td style="text-align:center;">${r.pax||'-'}</td>`+
+      `<td class="rsv-amt">${r.total?fmt(r.total):'-'}</td>`+
+      `<td><select class="rsv-status" data-s="${r.status||'대기'}">${STATUS.map(s=>`<option${s===(r.status||'대기')?' selected':''}>${s}</option>`).join('')}</select></td>`+
+      `<td><input class="rsv-memo" value="${esc(r.memo||'')}" placeholder="메모"></td>`+
+      `<td style="white-space:nowrap;">${r.snapshot?'<button class="rsv-act load">불러오기</button>':''}<button class="rsv-act del">삭제</button></td>`;
+    tr.querySelector('.rsv-status').addEventListener('change', e=>{
+      const all=getReservations(); const i=all.findIndex(x=>x.id===r.id); if(i>=0){ all[i].status=e.target.value; setReservations(all); e.target.dataset.s=e.target.value; }
+    });
+    tr.querySelector('.rsv-memo').addEventListener('change', e=>{
+      const all=getReservations(); const i=all.findIndex(x=>x.id===r.id); if(i>=0){ all[i].memo=e.target.value; setReservations(all); }
+    });
+    const loadBtn = tr.querySelector('.rsv-act.load');
+    if(loadBtn) loadBtn.addEventListener('click', ()=>{
+      if(r.snapshot && confirm(`${r.name}님 견적을 불러올까요? (작성 중 입력은 교체됩니다)`)){ applyForm(r.snapshot); render(); switchTab('quote'); toast(`${r.name}님 예약 견적을 불러왔습니다`); }
+    });
+    tr.querySelector('.rsv-act.del').addEventListener('click', ()=>{
+      if(!confirm(`${r.name}님 예약을 삭제할까요?`)) return;
+      setReservations(getReservations().filter(x=>x.id!==r.id)); renderReservations();
+    });
+    tb.appendChild(tr);
+  });
+}
+$('rsvSearch').addEventListener('input', renderReservations);
+$('rsvAddFromQuote').addEventListener('click', ()=>{
+  const q = computeQuote();
+  if(q.totalPax<1){ toast('견적 탭에서 인원을 먼저 입력해주세요', true); return; }
+  const rec = {
+    id: 'r'+Date.now(), ts: Date.now(),
+    name: $('custName').value.trim() || '(고객명 미입력)',
+    tel: STAFF_TEL[$('staffName').value] || '',
+    nights: packLabel(q.dispNights), ship: shortShip(q.ships.out),
+    pax: q.totalPax, total: q.total, status:'대기', memo:'',
+    startDate: $('startDate').value, snapshot: collectForm(),
+  };
+  const all = getReservations(); all.unshift(rec); setReservations(all);
+  switchTab('reserve');
+  toast('현재 견적을 예약으로 저장했습니다');
+});
+$('rsvExportBtn').addEventListener('click', ()=>{
+  const list = getReservations();
+  if(!list.length){ toast('내보낼 예약이 없습니다', true); return; }
+  const head = ['접수일','고객명','연락처','일정','선박','인원','금액','상태','메모'];
+  const rows = list.map(r=>{ const d=new Date(r.ts); return [`${d.getFullYear()}.${d.getMonth()+1}.${d.getDate()}`,r.name,r.tel,r.nights,r.ship,r.pax,r.total,r.status,(r.memo||'').replace(/[\n,]/g,' ')]; });
+  const csv = '﻿' + [head, ...rows].map(a=>a.map(v=>`"${String(v==null?'':v).replace(/"/g,'""')}"`).join(',')).join('\n');
+  const blob = new Blob([csv], {type:'text/csv'});
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `굿투어_예약목록.csv`; a.click();
+});
+
+/* ---- 진입 처리: 고객용 뷰 / 사전정보 링크 / 마지막 탭 ---- */
+(function initShell(){
+  const params = new URLSearchParams(location.search);
+  const hash = location.hash || '';
+  if(hash.startsWith('#load=')){
+    const o = decodeIntake(hash.slice(6));
+    history.replaceState(null,'',location.pathname);
+    if(o){ if(confirm(`고객 사전정보(${o.name||'-'})를 견적에 불러올까요?`)){ applyIntakeToQuote(o); return; } }
+  }
+  if(params.get('view')==='customer'){
+    document.body.classList.add('customer-view'); switchTab('intake'); return;
+  }
+  let last='quote'; try{ last=localStorage.getItem('gt_active_tab')||'quote'; }catch(e){}
+  switchTab(['intake','quote','reserve'].includes(last)?last:'quote');
+})();
 </script>
 </body>
 </html>
