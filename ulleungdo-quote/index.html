@@ -244,6 +244,22 @@ select.tier-group{
 }
 .lodge-price-hint{font-size:11px;color:var(--stone);margin-top:-2px;margin-bottom:8px;}
 
+/* 식대 */
+.meal-head{display:grid;grid-template-columns:70px 90px 1fr;gap:8px;font-size:10.5px;color:var(--steel);font-weight:700;margin-bottom:5px;padding:0 2px;}
+.meal-head span:last-child{text-align:left;}
+.meal-row{display:grid;grid-template-columns:70px 90px 1fr;gap:8px;align-items:center;margin-bottom:8px;}
+.meal-label{font-size:13px;font-weight:700;line-height:1.25;}
+.meal-row .meal-cnt,.meal-row .meal-price,.meal-row select{
+  border:1.5px solid var(--hairline-strong);border-radius:10px;padding:8px 10px;height:42px;
+  font-family:inherit;font-size:13.5px;color:var(--ink);background:var(--canvas);outline:none;width:100%;
+  -webkit-appearance:none;appearance:none;
+}
+.meal-row .meal-cnt{text-align:center;font-weight:700;-moz-appearance:textfield;}
+.meal-row .meal-cnt::-webkit-outer-spin-button,.meal-row .meal-cnt::-webkit-inner-spin-button{-webkit-appearance:none;margin:0;}
+.meal-row .meal-cnt[readonly]{background:var(--surface-soft);color:var(--steel);}
+.meal-row select{background-image:url("data:image/svg+xml,%3Csvg width='12' height='8' viewBox='0 0 12 8' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1.5L6 6.5L11 1.5' stroke='%235f7385' stroke-width='1.8' stroke-linecap='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 9px center;background-size:10px;padding-right:26px;}
+.meal-row .meal-price:focus,.meal-row select:focus,.meal-row .meal-cnt:focus{border-color:var(--wave-green-dark);}
+
 /* 티켓 */
 .ticket{
   background:linear-gradient(160deg,var(--sea-deep) 0%,#06344c 100%);
@@ -630,8 +646,42 @@ footer.note{text-align:center;color:var(--steel);font-size:12px;margin-top:26px;
         <button type="button" class="btn light" id="addLodgeBtn" style="flex:0;min-width:auto;padding:12px 20px;font-size:13.5px;">+ 숙소 추가</button>
       </div>
 
+      <div class="card">
+        <h2><span class="num">5</span>식대 <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--steel);">— 1인 기준, 일정·선박 자동</span></h2>
+        <div class="hint" id="mealAutoHint" style="margin-bottom:10px;"></div>
+        <div class="meal-head"><span>끼니</span><span>수량</span><span>1인 단가 (수정 가능)</span></div>
+        <div class="meal-row">
+          <div class="meal-label">조식</div>
+          <input id="meal_b_cnt" class="meal-cnt" readonly aria-label="조식 수량">
+          <input id="meal_b_price" class="meal-price" type="text" inputmode="numeric" autocomplete="off" placeholder="조식 단가">
+        </div>
+        <div class="meal-row" id="mealCruiseRow" style="display:none;">
+          <div class="meal-label">크루즈<br>조식</div>
+          <select id="mealCruiseBf" aria-label="크루즈편 조식 종류">
+            <option value="cruise">크루즈조식</option>
+            <option value="normal">일반조식</option>
+          </select>
+          <input id="meal_cruise_price" class="meal-price" type="text" inputmode="numeric" autocomplete="off" placeholder="크루즈조식 단가">
+        </div>
+        <div class="meal-row">
+          <div class="meal-label">중식</div>
+          <input id="meal_l_cnt" class="meal-cnt" readonly aria-label="중식 수량">
+          <input id="meal_l_price" class="meal-price" type="text" inputmode="numeric" autocomplete="off" placeholder="중식 단가">
+        </div>
+        <div class="meal-row">
+          <div class="meal-label">석식<br><small style="color:var(--stone);font-weight:600;">자유식</small></div>
+          <input id="meal_d_cnt" class="meal-cnt" type="number" min="0" value="0" inputmode="numeric" aria-label="석식 수량">
+          <input id="meal_d_price" class="meal-price" type="text" inputmode="numeric" autocomplete="off" placeholder="석식 단가">
+        </div>
+        <div class="price-save">
+          <span class="badge-dirty price-dirty" style="display:none;">미저장</span>
+          <button type="button" class="btn light price-save-btn">💾 요금 저장</button>
+        </div>
+        <div class="hint" id="mealCalcHint" style="margin-bottom:0;"></div>
+      </div>
+
       <div class="card" id="paxCard">
-        <h2><span class="num">5</span>인원 구성 <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--steel);">— 등급별 1인당 금액 실시간 표시</span></h2>
+        <h2><span class="num">6</span>인원 구성 <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--steel);">— 등급별 1인당 금액 실시간 표시</span></h2>
         <div id="tierList"></div>
       </div>
     </div>
@@ -850,6 +900,7 @@ const DEFAULT_SHIP_FARE  = {crz:190000, poh:175000, muk:160000}; /* 대인 왕�
 const DEFAULT_TOUR_PRICE = {bus:38000, taxi:300000, starex:350000, combi:400000, bus25:500000, bus35:600000, rent:0}; /* bus=1인당, 나머지=팀 총액 */
 const DEFAULT_DOKDO_FARE = 55000; /* 독도 1인 추가요금 */
 const DEFAULT_FUEL_FARE  = 0;     /* 유류할증료(1인) — 고정값, 화면에서 수정 시 유지 */
+const DEFAULT_MEAL_PRICE = { breakfast:8000, cruiseBreakfast:12000, lunch:10000, dinner:12000 }; /* 1인 끼니 단가 */
 
 const DRAFT_KEY = 'gt_quote_draft_v5';
 const HIST_KEY  = 'gt_quote_hist_v5';
@@ -871,6 +922,7 @@ function loadPriceCfg(){
     rent: JSON.parse(JSON.stringify(RENT_TABLE)), /* {veh:{off,peak}} 딥카피 */
     dokdo: DEFAULT_DOKDO_FARE,
     fuel: DEFAULT_FUEL_FARE,
+    meal: {...DEFAULT_MEAL_PRICE},
   };
   try{
     const raw = JSON.parse(localStorage.getItem(PRICE_KEY)||'{}');
@@ -879,6 +931,7 @@ function loadPriceCfg(){
     if(raw.rent) for(const k of RENT_ORDER){ if(raw.rent[k]) Object.assign(base.rent[k], raw.rent[k]); }
     if(typeof raw.dokdo==='number') base.dokdo = raw.dokdo;
     if(typeof raw.fuel==='number') base.fuel = raw.fuel;
+    if(raw.meal) Object.assign(base.meal, raw.meal);
   }catch(e){}
   return base;
 }
@@ -949,6 +1002,20 @@ function loadRentPriceInput(){ $('rentPrice').value = fmtWon(rentBase()); }
 function loadShipFareInput(){ $('shipFare').value = fmtWon(CFG.ship[$('shipOut').value] ?? 0); }
 function loadDokdoFareInput(){ $('dokdoFare').value = fmtWon(CFG.dokdo ?? 0); }
 function loadFuelFareInput(){ $('fuelFare').value = fmtWon(CFG.fuel ?? 0); }
+function loadMealPriceInputs(){
+  $('meal_b_price').value = fmtWon(CFG.meal.breakfast ?? 0);
+  $('meal_cruise_price').value = fmtWon(CFG.meal.cruiseBreakfast ?? 0);
+  $('meal_l_price').value = fmtWon(CFG.meal.lunch ?? 0);
+  $('meal_d_price').value = fmtWon(CFG.meal.dinner ?? 0);
+}
+/* 조식·중식 자동 끼니 수 (석식은 자유식이라 별도 입력) */
+function mealCounts(){
+  const nights = parseInt($('daySel').value,10);
+  const ship = $('shipOut').value;
+  if(nights===1) return {b:1, l:2};        /* 1박2일: 조1·중2 = 3식 */
+  if(ship==='muk') return {b:2, l:2};      /* 묵호 2박3일: 조2·중2 = 4식 */
+  return {b:2, l:3};                        /* 크루즈·쾌속 2박3일: 조2·중3 = 5식 */
+}
 function numToKorean(num){
   if(num===0) return '영원';
   const digits=['','일','이','삼','사','오','육','칠','팔','구'];
@@ -1237,6 +1304,28 @@ function computeQuote(){
   const lodgeExtra = lodgings.reduce((s,l)=>s+l.price, 0);
   total += lodgeExtra;
 
+  /* 식대: 조식·중식(자동 끼니) + 석식(자유식, 직접 입력). 크루즈편 조식 1끼는 종류 선택 */
+  const mc = mealCounts();
+  const dCnt = Math.max(0, parseInt($('meal_d_cnt').value,10)||0);
+  const mp = CFG.meal;
+  const isCruiseShip = ships.out === 'crz';
+  const cruiseBfUse = isCruiseShip && $('mealCruiseBf').value === 'cruise';
+  let bfCost;
+  if(isCruiseShip){
+    /* 크루즈편 조식 1끼 = 선택 단가, 나머지 조식 = 일반조식 */
+    const firstBf = cruiseBfUse ? (mp.cruiseBreakfast||0) : (mp.breakfast||0);
+    bfCost = firstBf + (mp.breakfast||0) * Math.max(0, mc.b - 1);
+  } else {
+    bfCost = (mp.breakfast||0) * mc.b;
+  }
+  const mealPerPax = bfCost + (mp.lunch||0)*mc.l + (mp.dinner||0)*dCnt;
+  const mealTotalCnt = mc.b + mc.l + dCnt;
+  const mealSub = mealPerPax * totalPax;
+  if(mealSub > 0){
+    total += mealSub;
+    lines.push({key:'meal', label:`식대 ${mealTotalCnt}식`, c:totalPax, unit:mealPerPax, sub:mealSub});
+  }
+
   /* 크루즈 전날 밤 출항 → 표기 박수 +1 */
   const cruiseNight = ships.out === 'crz';
   const dispNights = nights + (cruiseNight ? 1 : 0);
@@ -1244,6 +1333,7 @@ function computeQuote(){
   return {ships, nights, dispNights, cruiseNight, tour, rentVeh, dokdo, season, counts, totalPax, effPax, total, lines,
           lodgings, lodgeExtra, shipFare, fuelFare, tourMode, tourTotal, tourPP, dokdoShip, dokdoPax, dokdoFare, dokdoSub,
           rentBase: tour==='rent' ? rentBase() : 0, rentBand: rentBand()==='peak'?'성수기':'비수기', rentMargin: RENT_MARGIN, rentCount: rentCount(),
+          meal: {b:mc.b, l:mc.l, d:dCnt, perPax:mealPerPax, sub:mealSub, totalCnt:mealTotalCnt, cruiseBfUse, isCruiseShip},
           dokdoPartial: dokdo && dokdoPax !== totalPax};
 }
 
@@ -1313,6 +1403,19 @@ function render(){
   } else {
     $('tourPPHint').innerHTML = `${TOUR_LABEL[q.tour]} 총액 <b>${fmt(q.tourTotal)}</b> (인원 무관 고정) ÷ ${q.effPax}명 = 1인당 환산 <b>${fmt(q.tourPP)}</b>`;
   }
+
+  /* 식대: 자동 끼니수 반영 + 크루즈 조식행 표시 + 안내/계산 힌트 */
+  $('meal_b_cnt').value = q.meal.b;
+  $('meal_l_cnt').value = q.meal.l;
+  $('mealCruiseRow').style.display = q.meal.isCruiseShip ? 'grid' : 'none';
+  const shipNm = shortShip(q.ships.out);
+  const baseCnt = q.meal.b + q.meal.l;
+  $('mealAutoHint').innerHTML =
+    `${q.nights===1?'1박2일':'2박3일'} · ${shipNm} 기준 <b>${baseCnt}식</b> (조식 ${q.meal.b} · 중식 ${q.meal.l}) 자동 · 석식은 자유식(필요 시 수량 입력)`
+    + (q.meal.isCruiseShip ? ` · 크루즈편 조식 1끼는 <b>${q.meal.cruiseBfUse?'크루즈조식':'일반조식'}</b>` : '');
+  $('mealCalcHint').innerHTML = q.totalPax>0
+    ? `식대 <b>1인 ${fmt(q.meal.perPax)}</b> × ${q.totalPax}명 = <b>${fmt(q.meal.sub)}</b> (총 ${q.meal.totalCnt}식)`
+    : `인원을 입력하면 식대가 계산됩니다.`;
 
   /* 독도 컨트롤: 선박 미선택이면 시간대·시간·인원·요금 비활성화 */
   const dokdoOn = !!q.dokdoShip;
@@ -1607,6 +1710,8 @@ function collectForm(){
     dokdoMin: $('dokdoMin').value,
     dokdoPax: $('dokdoPax').value,
     dokdoPaxManual,
+    mealDCnt: $('meal_d_cnt').value,
+    mealCruiseBf: $('mealCruiseBf').value,
     lodgings: getLodgings(),
     teamCount: $('teamCount').value,
     teamCountManual,
@@ -1646,6 +1751,8 @@ function applyForm(f){
   $('dokdoMin').value = f.dokdoMin||'';
   dokdoPaxManual = !!f.dokdoPaxManual;
   if(dokdoPaxManual && f.dokdoPax) $('dokdoPax').value = f.dokdoPax;
+  $('meal_d_cnt').value = f.mealDCnt || 0;
+  $('mealCruiseBf').value = f.mealCruiseBf || 'cruise';
   setLodgings(f.lodgings);
   TIERS.forEach(t=>{
     $(`cnt_${t.key}`).value = (f.counts&&f.counts[t.key])??t.def;
@@ -1785,6 +1892,12 @@ bindWonInput('rentPrice', v=>{ const veh=$('rentVeh').value; if(!CFG.rent[veh]) 
 bindWonInput('shipFare',  v=>{ CFG.ship[$('shipOut').value] = v; });
 bindWonInput('fuelFare',  v=>{ CFG.fuel = v; });
 bindWonInput('dokdoFare', v=>{ CFG.dokdo = v; });
+bindWonInput('meal_b_price',      v=>{ CFG.meal.breakfast = v; });
+bindWonInput('meal_cruise_price', v=>{ CFG.meal.cruiseBreakfast = v; });
+bindWonInput('meal_l_price',      v=>{ CFG.meal.lunch = v; });
+bindWonInput('meal_d_price',      v=>{ CFG.meal.dinner = v; });
+$('meal_d_cnt').addEventListener('input', render);
+$('mealCruiseBf').addEventListener('change', render);
 
 /* 오는편: '가는편과 동일'을 고르거나 가는편과 같은 선박을 고르면 동기화 모드 */
 $('shipIn').addEventListener('change', ()=>{
@@ -1897,7 +2010,8 @@ $('resetBtn').addEventListener('click', ()=>{
   $('rentVeh').value='ray';
   rentBandManual=false; $('rentBandSel').value=autoRentBand();
   $('rentCount').value=1;
-  loadTourPriceInput(); loadRentPriceInput(); loadShipFareInput(); loadDokdoFareInput(); loadFuelFareInput();
+  loadTourPriceInput(); loadRentPriceInput(); loadShipFareInput(); loadDokdoFareInput(); loadFuelFareInput(); loadMealPriceInputs();
+  $('meal_d_cnt').value=0; $('mealCruiseBf').value='cruise';
   $('dokdoShip').value='';
   $('dokdoAmpm').value='오전';
   $('dokdoHour').value='';
@@ -1933,12 +2047,16 @@ $('histClearBtn').addEventListener('click', ()=>{
 /* 요금 설정 저장 — 각 섹션의 '요금 저장' 버튼 (승선권·유류할증·투어·차량·독도 일괄 확정) */
 function saveAllPrices(clickedBtn){
   /* blur 전 마지막 입력값을 CFG에 확정 반영 */
-  ['tourPrice','rentPrice','shipFare','fuelFare','dokdoFare'].forEach(id=>{ const el=$(id); if(el) reformatWonInput(el); });
+  ['tourPrice','rentPrice','shipFare','fuelFare','dokdoFare','meal_b_price','meal_cruise_price','meal_l_price','meal_d_price'].forEach(id=>{ const el=$(id); if(el) reformatWonInput(el); });
   CFG.tour[$('tourSel').value] = parseWonVal($('tourPrice').value);
   const veh=$('rentVeh').value; if(!CFG.rent[veh]) CFG.rent[veh]={off:0,peak:0}; CFG.rent[veh][rentBand()] = parseWonVal($('rentPrice').value);
   CFG.ship[$('shipOut').value] = parseWonVal($('shipFare').value);
   CFG.fuel = parseWonVal($('fuelFare').value);
   CFG.dokdo = parseWonVal($('dokdoFare').value);
+  CFG.meal.breakfast = parseWonVal($('meal_b_price').value);
+  CFG.meal.cruiseBreakfast = parseWonVal($('meal_cruise_price').value);
+  CFG.meal.lunch = parseWonVal($('meal_l_price').value);
+  CFG.meal.dinner = parseWonVal($('meal_d_price').value);
   savePriceCfg();
   savedCfgJSON = JSON.stringify(CFG);
   updateDirty();
@@ -1958,6 +2076,7 @@ loadRentPriceInput();
 loadShipFareInput();
 loadDokdoFareInput();
 loadFuelFareInput();
+loadMealPriceInputs();
 loadDraft();
 if(!document.querySelector('#lodgeList .lodge-row')) addLodgeRow(); /* 초기 빈 숙소 행 */
 updateSeasonPills();
