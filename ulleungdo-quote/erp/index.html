@@ -56,10 +56,10 @@ svg.ic{width:16px;height:16px;flex-shrink:0;fill:none;stroke:currentColor;stroke
   width:220px;flex-shrink:0;background:var(--surface);border-right:1px solid var(--border);
   display:flex;flex-direction:column;position:sticky;top:0;height:100vh;
 }
-.sb-logo{padding:18px 20px 14px;display:flex;align-items:center;gap:9px;border-bottom:1px solid var(--border);}
-.sb-logo .mark{width:30px;height:30px;border-radius:8px;background:var(--blue);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:15px;letter-spacing:-1px;}
-.sb-logo .txt{font-weight:800;font-size:15px;}
-.sb-logo .txt small{display:block;font-weight:600;font-size:10px;color:var(--faint);letter-spacing:1px;}
+.sb-logo{padding:16px 18px 13px;display:flex;align-items:center;gap:9px;border-bottom:1px solid var(--border);}
+.sb-logo .txt{font-weight:800;font-size:15px;line-height:1.15;}
+.sb-logo .txt small{display:block;font-weight:600;font-size:9.5px;color:var(--faint);letter-spacing:.6px;margin-top:2px;}
+.gt-word{font-family:Georgia,'Times New Roman',serif;font-style:italic;font-weight:700;letter-spacing:-.5px;color:#3A99D9;}
 .sb-nav{flex:1;overflow-y:auto;padding:10px 10px;}
 .sb-group{font-size:11px;font-weight:700;color:var(--faint);padding:14px 10px 6px;letter-spacing:.4px;}
 .sb-item{
@@ -533,6 +533,16 @@ const ICONS={
 };
 function ic(name,cls){ return `<svg class="${cls||'ic'}" viewBox="0 0 24 24"><path d="${ICONS[name]||''}"/></svg>`; }
 
+/* good-tour 브랜드 로고 (말풍선 + 흰 g) — 원본 로고 SVG 재현 */
+const GT_BLUE='#3A99D9';
+function gtLogo(size){
+  return `<svg viewBox="0 0 200 200" style="width:${size}px;height:${size}px;flex-shrink:0;" role="img" aria-label="good-tour">
+    <circle cx="104" cy="88" r="84" fill="${GT_BLUE}"/>
+    <path d="M62 148 C60 172 46 189 26 198 C54 195 76 182 88 163 Z" fill="${GT_BLUE}"/>
+    <text x="98" y="124" text-anchor="middle" font-family="Georgia,'Times New Roman',serif" font-style="italic" font-weight="bold" font-size="112" fill="#ffffff">g</text>
+  </svg>`;
+}
+
 let _toastTimer;
 function toast(msg,type){ const r=document.getElementById('toast-root'); const t=document.createElement('div'); t.className='toast '+(type||''); t.innerHTML=msg; r.appendChild(t); setTimeout(()=>{ t.style.opacity='0'; t.style.transition='opacity .3s'; setTimeout(()=>t.remove(),300); },2600); }
 
@@ -636,7 +646,7 @@ function renderShell(app){
   <div class="scrim" id="scrim" onclick="closeSidebar()"></div>
   <div class="app">
     <aside class="sidebar" id="sidebar">
-      <div class="sb-logo"><div class="mark">G</div><div class="txt">굿투어 ERP<small>ULLEUNGDO</small></div></div>
+      <div class="sb-logo">${gtLogo(36)}<div class="txt"><span class="gt-word" style="font-size:17.5px;">good-tour</span><small>굿투어 ERP · ULLEUNGDO</small></div></div>
       <nav class="sb-nav">${navHtml}</nav>
       <div class="sb-user">
         <div class="av">${u.name.slice(0,1)}</div>
@@ -681,9 +691,9 @@ function renderLogin(app){
   app.innerHTML=`
   <div style="min-height:100vh;display:flex;align-items:center;justify-content:center;background:linear-gradient(160deg,#1B68FA 0%,#0F766E 100%);padding:20px;">
     <div style="background:#fff;border-radius:18px;box-shadow:0 20px 60px rgba(0,0,0,.25);width:100%;max-width:400px;padding:34px 30px;">
-      <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">
-        <div class="mark" style="width:38px;height:38px;border-radius:10px;background:var(--blue);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:18px;">G</div>
-        <div><div style="font-weight:800;font-size:19px;">굿투어 ERP</div><div style="font-size:11px;color:var(--faint);letter-spacing:1px;">ULLEUNGDO OPERATION SYSTEM</div></div>
+      <div style="display:flex;align-items:center;gap:11px;margin-bottom:6px;">
+        ${gtLogo(48)}
+        <div><div class="gt-word" style="font-size:26px;line-height:1;">good-tour</div><div style="font-size:11px;color:var(--faint);letter-spacing:.5px;margin-top:4px;">굿투어 ERP · www.good-tour.kr</div></div>
       </div>
       <p style="color:var(--muted);font-size:13px;margin:14px 0 18px;">사용할 직원 계정을 선택해 로그인하세요.</p>
       <div style="display:flex;flex-direction:column;gap:8px;">
