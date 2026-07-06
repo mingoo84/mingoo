@@ -101,7 +101,9 @@ header.top p{margin:0;color:var(--on-dark-muted);font-size:13px;max-width:560px;
 @media(max-width:420px){ .field-row:not(.four){grid-template-columns:1fr;} }
 .field-row.four{grid-template-columns:repeat(4,1fr);}
 @media(max-width:560px){ .field-row.four{grid-template-columns:1fr 1fr;} }
-#rentRow{grid-template-columns:1.4fr 1fr 0.9fr 1.2fr;}
+#rentRow{grid-template-columns:1.2fr 1fr 0.8fr 1.25fr;align-items:end;}
+#rentRow .field{justify-content:flex-end;}
+#rentRow .field label{min-height:16px;line-height:1.35;}
 @media(max-width:560px){ #rentRow{grid-template-columns:1fr 1fr;} }
 .time-inline{display:flex;align-items:center;gap:5px;}
 .time-inline select{flex:1;min-width:0;padding-left:8px;padding-right:22px;background-position:right 7px center;text-align:center;text-align-last:center;}
