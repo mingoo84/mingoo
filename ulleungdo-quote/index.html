@@ -48,26 +48,63 @@ body{
 }
 .wrap{max-width:1180px;margin:0 auto;padding:16px 14px 40px;}
 
-/* ===== 관리자 탭 셸 ===== */
-.tabnav{
-  position:sticky;top:0;z-index:80;background:var(--sea-deep);
-  display:flex;gap:2px;padding:8px 10px calc(8px + env(safe-area-inset-bottom,0));
-  overflow-x:auto;-webkit-overflow-scrolling:touch;
+/* ===== ERP 셸 (상단 메뉴 + 좌측 사이드바) ===== */
+.erp-top{
+  position:sticky;top:0;z-index:90;background:#fff;border-bottom:1px solid var(--hairline);
+  display:flex;align-items:center;gap:14px;padding:0 14px;height:56px;
 }
-.tabnav button{
-  border:none;background:transparent;color:var(--on-dark-muted);
-  font-family:inherit;font-size:14px;font-weight:700;padding:11px 16px;border-radius:9999px;
-  cursor:pointer;white-space:nowrap;display:flex;align-items:center;gap:7px;transition:.15s;
+.erp-logo{font-weight:800;font-size:15.5px;color:var(--sea-deep);display:flex;align-items:center;gap:7px;white-space:nowrap;}
+.erp-logo .lg-badge{font-size:9.5px;letter-spacing:1.5px;color:var(--wave-green-dark);font-weight:800;background:var(--wave-green-bg);padding:2px 7px;border-radius:9999px;}
+.erp-tabs{display:flex;gap:2px;overflow-x:auto;height:100%;-webkit-overflow-scrolling:touch;}
+.erp-tabs button{
+  border:none;background:none;font-family:inherit;font-size:14px;font-weight:700;color:var(--steel);
+  padding:0 15px;height:100%;cursor:pointer;position:relative;white-space:nowrap;
 }
-.tabnav button .tn-num{
-  width:20px;height:20px;border-radius:50%;background:rgba(255,255,255,.14);color:var(--on-dark-muted);
-  font-size:11px;display:flex;align-items:center;justify-content:center;flex-shrink:0;
+.erp-tabs button:hover{color:var(--sea-deep);}
+.erp-tabs button.active{color:var(--sea-deep);}
+.erp-tabs button.active::after{content:'';position:absolute;left:10px;right:10px;bottom:0;height:3px;border-radius:3px 3px 0 0;background:var(--wave-green);}
+.erp-body{display:flex;align-items:stretch;min-height:calc(100vh - 56px);}
+.erp-side{
+  width:198px;flex-shrink:0;background:#fff;border-right:1px solid var(--hairline);
+  padding:16px 10px;position:sticky;top:56px;align-self:flex-start;height:calc(100vh - 56px);overflow-y:auto;
 }
-.tabnav button.active{background:var(--wave-green);color:var(--sea-deep);}
-.tabnav button.active .tn-num{background:var(--sea-deep);color:var(--wave-green);}
+.erp-side .sd-group{font-size:10.5px;font-weight:800;color:var(--stone);letter-spacing:1px;margin:4px 8px 8px;}
+.erp-side button{
+  display:flex;width:100%;border:none;background:none;font-family:inherit;font-size:13.5px;font-weight:600;
+  color:var(--slate);padding:10px 12px;border-radius:10px;cursor:pointer;text-align:left;gap:8px;align-items:center;margin-bottom:2px;
+}
+.erp-side button:hover{background:var(--surface-soft);}
+.erp-side button.active{background:var(--wave-green-bg);color:var(--wave-green-dark);font-weight:800;}
+.erp-main{flex:1;min-width:0;}
+@media(max-width:860px){
+  .erp-body{display:block;min-height:0;}
+  .erp-side{width:auto;height:auto;position:sticky;top:56px;z-index:85;display:flex;gap:6px;overflow-x:auto;
+    border-right:none;border-bottom:1px solid var(--hairline);padding:8px 10px;}
+  .erp-side .sd-group{display:none;}
+  .erp-side button{width:auto;white-space:nowrap;border:1px solid var(--hairline);border-radius:9999px;padding:8px 14px;margin-bottom:0;}
+  .erp-side button.active{border-color:var(--wave-green-soft);}
+}
 .tabpanel{display:none;}
 .tabpanel.active{display:block;}
-body.customer-view .tabnav{display:none;}
+body.customer-view .erp-top,body.customer-view .erp-side{display:none;}
+
+/* 통계 카드 · 바 차트 (매출분석) */
+.stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:14px;}
+.stat-card{background:var(--canvas);border:1px solid var(--hairline);border-radius:12px;padding:14px 15px;}
+.stat-card .sc-k{font-size:11px;color:var(--steel);font-weight:700;}
+.stat-card .sc-v{font-size:20px;font-weight:800;color:var(--sea-deep);margin-top:4px;font-variant-numeric:tabular-nums;letter-spacing:-.3px;}
+.stat-card .sc-s{font-size:11px;color:var(--stone);margin-top:2px;}
+.bar-row{display:grid;grid-template-columns:70px 1fr 96px;gap:8px;align-items:center;margin-bottom:7px;font-size:12px;}
+.bar-row .bl{color:var(--slate);font-weight:700;white-space:nowrap;}
+.bar-track{height:14px;background:var(--surface-soft);border-radius:7px;overflow:hidden;}
+.bar-fill{height:100%;background:var(--wave-green);border-radius:7px;min-width:2px;}
+.bar-row .bv{text-align:right;font-variant-numeric:tabular-nums;color:var(--slate);white-space:nowrap;}
+
+/* 결제상태 칩 */
+table.rsv select.rsv-pay{border:1.5px solid var(--hairline);border-radius:8px;padding:5px 8px;font-family:inherit;font-size:12px;font-weight:800;-webkit-appearance:none;appearance:none;}
+table.rsv select.rsv-pay[data-s="미수"]{color:var(--danger);background:#fdeaea;}
+table.rsv select.rsv-pay[data-s="완납"]{color:var(--wave-green-dark);background:var(--wave-green-bg);}
+table.rsv select.rsv-pay[data-s="과납"]{color:var(--warn-text);background:var(--warn-bg);}
 
 /* ===== 사전정보 · 예약관리 공통 ===== */
 .admin-wrap{max-width:1180px;margin:0 auto;padding:20px 14px 60px;}
@@ -474,11 +511,19 @@ footer.note{text-align:center;color:var(--steel);font-size:12px;margin-top:26px;
 </head>
 <body>
 
-<nav class="tabnav" id="tabnav">
-  <button type="button" data-tab="intake"><span class="tn-num">1</span>고객 사전정보</button>
-  <button type="button" data-tab="quote" class="active"><span class="tn-num">2</span>견적 계산</button>
-  <button type="button" data-tab="reserve"><span class="tn-num">3</span>예약 관리</button>
-</nav>
+<header class="erp-top">
+  <div class="erp-logo">🏝️ 굿투어 <span class="lg-badge">ERP</span></div>
+  <nav class="erp-tabs" id="erpTabs">
+    <button type="button" data-tab="customer">고객</button>
+    <button type="button" data-tab="quote" class="active">견적계산</button>
+    <button type="button" data-tab="reserve">예약관리</button>
+    <button type="button" data-tab="sales">매출분석</button>
+  </nav>
+</header>
+
+<div class="erp-body">
+  <aside class="erp-side" id="erpSide"></aside>
+  <main class="erp-main">
 
 <!-- ================= TAB 1 : 고객 사전정보 입력 ================= -->
 <div id="tab-intake" class="tabpanel">
@@ -547,6 +592,43 @@ footer.note{text-align:center;color:var(--steel);font-size:12px;margin-top:26px;
         </div>
       </div>
     </div>
+  </div>
+</div>
+
+<!-- ================= TAB 1-2 : 통화기록 ================= -->
+<div id="tab-calls" class="tabpanel">
+  <div class="admin-wrap">
+    <div class="panel-hero">
+      <div class="eyebrow">GOOD TOUR · 고객</div>
+      <h1>통화기록 정리</h1>
+      <p>고객 통화 내용을 빠르게 기록하고 후속조치를 관리합니다. 기록에서 바로 견적 작성으로 넘어갈 수 있습니다.</p>
+    </div>
+
+    <div class="card">
+      <h2><span class="num">＋</span>새 통화 기록</h2>
+      <div class="field-row">
+        <div class="field"><label for="cl_name">고객명</label><input id="cl_name" placeholder="예: 홍길동" autocomplete="off"></div>
+        <div class="field"><label for="cl_tel">연락처</label><input id="cl_tel" placeholder="010-0000-0000" inputmode="tel" autocomplete="off"></div>
+      </div>
+      <div class="field-row">
+        <div class="field"><label for="cl_note">통화 내용</label><input id="cl_note" placeholder="예: 7월 말 2박3일 4인 문의, 독도 희망" autocomplete="off"></div>
+        <div class="field"><label for="cl_next">후속조치</label>
+          <select id="cl_next"><option>없음</option><option>견적 발송</option><option>재통화 필요</option><option>예약 진행</option></select>
+        </div>
+      </div>
+      <div class="btnbar"><button class="btn primary" id="clAddBtn" style="background:var(--wave-green-dark);color:#fff;">기록 추가</button></div>
+    </div>
+
+    <div class="rsv-toolbar">
+      <input class="rsv-search" id="clSearch" placeholder="고객명·연락처·내용 검색" autocomplete="off">
+    </div>
+    <div class="rsv-table-wrap">
+      <table class="rsv">
+        <thead><tr><th>일시</th><th>고객명</th><th>연락처</th><th>통화 내용</th><th>후속조치</th><th></th></tr></thead>
+        <tbody id="clBody"></tbody>
+      </table>
+    </div>
+    <div class="rsv-empty" id="clEmpty" style="display:none;">통화 기록이 없습니다. 위에서 첫 기록을 추가해보세요.</div>
   </div>
 </div>
 
@@ -930,7 +1012,7 @@ footer.note{text-align:center;color:var(--steel);font-size:12px;margin-top:26px;
         <thead>
           <tr>
             <th>접수일</th><th>고객명</th><th>연락처</th><th>일정</th><th>선박</th>
-            <th>인원</th><th>금액</th><th>상태</th><th>메모</th><th></th>
+            <th>인원</th><th>금액</th><th>상태</th><th>결제</th><th>메모</th><th></th>
           </tr>
         </thead>
         <tbody id="rsvBody"></tbody>
@@ -939,6 +1021,33 @@ footer.note{text-align:center;color:var(--steel);font-size:12px;margin-top:26px;
     <div class="rsv-empty" id="rsvEmpty" style="display:none;">저장된 예약이 없습니다. 견적 계산 탭에서 견적을 만든 뒤 ‘현재 견적을 예약으로 저장’을 눌러보세요.</div>
   </div>
 </div>
+
+<!-- ================= TAB 4 : 매출분석 ================= -->
+<div id="tab-sales" class="tabpanel">
+  <div class="admin-wrap">
+    <div class="panel-hero">
+      <div class="eyebrow">GOOD TOUR · 매출분석</div>
+      <h1>매출 현황 한눈에</h1>
+      <p>예약 관리 데이터 기준으로 집계합니다. 취소 건은 매출에서 제외되며, 결제 상태와 무관하게 확정·대기 금액을 구분해 보여줍니다.</p>
+    </div>
+
+    <div class="stat-grid" id="salesCards"></div>
+
+    <div class="card">
+      <h2><span class="num">₩</span>월별 매출 (확정 기준)</h2>
+      <div id="salesMonthly"></div>
+      <div class="rsv-empty" id="salesMonthlyEmpty" style="display:none;padding:20px;">집계할 확정 예약이 없습니다.</div>
+    </div>
+
+    <div class="card">
+      <h2><span class="num">⛴</span>선박별 실적</h2>
+      <div id="salesByShip"></div>
+    </div>
+  </div>
+</div>
+
+  </main>
+</div><!-- /erp-body -->
 
 <div class="stickybar" id="stickybar">
   <div>
@@ -2252,15 +2361,34 @@ render();
    ============================================================ */
 const RSV_KEY = 'gt_reservations_v1';
 
-function switchTab(name){
-  document.querySelectorAll('.tabnav button').forEach(b=> b.classList.toggle('active', b.dataset.tab===name));
-  ['intake','quote','reserve'].forEach(t=> $('tab-'+t).classList.toggle('active', t===name));
-  $('stickybar').style.display = name==='quote' ? '' : 'none';
-  if(name==='reserve') renderReservations();
-  window.scrollTo({top:0});
-  try{ localStorage.setItem('gt_active_tab', name); }catch(e){}
+const NAV = {
+  customer:{label:'고객', items:[{id:'intake',label:'📝 사전정보'},{id:'calls',label:'📞 통화기록'}]},
+  quote:{label:'견적계산', items:[{id:'quote',label:'🧮 견적 작성'}]},
+  reserve:{label:'예약관리', items:[{id:'reserve',label:'📋 예약 목록'}]},
+  sales:{label:'매출분석', items:[{id:'sales',label:'📊 매출 요약'}]},
+};
+const SUB_TO_TAB = {intake:'customer', calls:'customer', quote:'quote', reserve:'reserve', sales:'sales'};
+const ALL_SUBS = ['intake','calls','quote','reserve','sales'];
+function renderSide(tab, sub){
+  const n = NAV[tab];
+  $('erpSide').innerHTML = `<div class="sd-group">${n.label}</div>`
+    + n.items.map(it=>`<button type="button" data-sub="${it.id}" class="${it.id===sub?'active':''}">${it.label}</button>`).join('');
+  $('erpSide').querySelectorAll('button[data-sub]').forEach(b=> b.addEventListener('click', ()=> switchTab(b.dataset.sub)));
 }
-document.querySelectorAll('.tabnav button').forEach(b=> b.addEventListener('click', ()=> switchTab(b.dataset.tab)));
+function switchTab(sub){
+  if(!SUB_TO_TAB[sub]) sub = 'quote';
+  const tab = SUB_TO_TAB[sub];
+  document.querySelectorAll('.erp-tabs button').forEach(b=> b.classList.toggle('active', b.dataset.tab===tab));
+  ALL_SUBS.forEach(s=>{ const p=$('tab-'+s); if(p) p.classList.toggle('active', s===sub); });
+  renderSide(tab, sub);
+  $('stickybar').style.display = sub==='quote' ? '' : 'none';
+  if(sub==='reserve') renderReservations();
+  if(sub==='calls') renderCalls();
+  if(sub==='sales') renderSales();
+  window.scrollTo({top:0});
+  try{ localStorage.setItem('gt_active_tab', sub); }catch(e){}
+}
+document.querySelectorAll('.erp-tabs button').forEach(b=> b.addEventListener('click', ()=> switchTab(NAV[b.dataset.tab].items[0].id)));
 
 /* ---- 사전정보: 제출 → 담당자 전달용 링크/텍스트 ---- */
 function collectIntake(){
@@ -2322,10 +2450,14 @@ function renderReservations(){
       `<td style="text-align:center;">${r.pax||'-'}</td>`+
       `<td class="rsv-amt">${r.total?fmt(r.total):'-'}</td>`+
       `<td><select class="rsv-status" data-s="${r.status||'대기'}">${STATUS.map(s=>`<option${s===(r.status||'대기')?' selected':''}>${s}</option>`).join('')}</select></td>`+
+      `<td><select class="rsv-pay" data-s="${r.pay||'미수'}">${['미수','완납','과납'].map(s=>`<option${s===(r.pay||'미수')?' selected':''}>${s}</option>`).join('')}</select></td>`+
       `<td><input class="rsv-memo" value="${esc(r.memo||'')}" placeholder="메모"></td>`+
       `<td style="white-space:nowrap;">${r.snapshot?'<button class="rsv-act load">불러오기</button>':''}<button class="rsv-act del">삭제</button></td>`;
     tr.querySelector('.rsv-status').addEventListener('change', e=>{
       const all=getReservations(); const i=all.findIndex(x=>x.id===r.id); if(i>=0){ all[i].status=e.target.value; setReservations(all); e.target.dataset.s=e.target.value; }
+    });
+    tr.querySelector('.rsv-pay').addEventListener('change', e=>{
+      const all=getReservations(); const i=all.findIndex(x=>x.id===r.id); if(i>=0){ all[i].pay=e.target.value; setReservations(all); e.target.dataset.s=e.target.value; }
     });
     tr.querySelector('.rsv-memo').addEventListener('change', e=>{
       const all=getReservations(); const i=all.findIndex(x=>x.id===r.id); if(i>=0){ all[i].memo=e.target.value; setReservations(all); }
@@ -2350,7 +2482,7 @@ $('rsvAddFromQuote').addEventListener('click', ()=>{
     name: $('custName').value.trim() || '(고객명 미입력)',
     tel: STAFF_TEL[$('staffName').value] || '',
     nights: packLabel(q.dispNights), ship: shortShip(q.ships.out),
-    pax: q.totalPax, total: q.total, status:'대기', memo:'',
+    pax: q.totalPax, total: q.total, status:'대기', pay:'미수', memo:'',
     startDate: $('startDate').value, snapshot: collectForm(),
   };
   const all = getReservations(); all.unshift(rec); setReservations(all);
@@ -2360,12 +2492,108 @@ $('rsvAddFromQuote').addEventListener('click', ()=>{
 $('rsvExportBtn').addEventListener('click', ()=>{
   const list = getReservations();
   if(!list.length){ toast('내보낼 예약이 없습니다', true); return; }
-  const head = ['접수일','고객명','연락처','일정','선박','인원','금액','상태','메모'];
-  const rows = list.map(r=>{ const d=new Date(r.ts); return [`${d.getFullYear()}.${d.getMonth()+1}.${d.getDate()}`,r.name,r.tel,r.nights,r.ship,r.pax,r.total,r.status,(r.memo||'').replace(/[\n,]/g,' ')]; });
+  const head = ['접수일','고객명','연락처','일정','선박','인원','금액','상태','결제','메모'];
+  const rows = list.map(r=>{ const d=new Date(r.ts); return [`${d.getFullYear()}.${d.getMonth()+1}.${d.getDate()}`,r.name,r.tel,r.nights,r.ship,r.pax,r.total,r.status,r.pay||'미수',(r.memo||'').replace(/[\n,]/g,' ')]; });
   const csv = '﻿' + [head, ...rows].map(a=>a.map(v=>`"${String(v==null?'':v).replace(/"/g,'""')}"`).join(',')).join('\n');
   const blob = new Blob([csv], {type:'text/csv'});
   const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `굿투어_예약목록.csv`; a.click();
 });
+
+/* ---- 통화기록 ---- */
+const CALL_KEY = 'gt_calls_v1';
+function getCalls(){ try{ return JSON.parse(localStorage.getItem(CALL_KEY)||'[]'); }catch(e){ return []; } }
+function setCalls(a){ try{ localStorage.setItem(CALL_KEY, JSON.stringify(a)); }catch(e){} }
+function renderCalls(){
+  const q = ($('clSearch').value||'').trim().toLowerCase();
+  let list = getCalls();
+  if(q) list = list.filter(c => `${c.name} ${c.tel} ${c.note}`.toLowerCase().includes(q));
+  const tb = $('clBody'); tb.innerHTML='';
+  $('clEmpty').style.display = list.length ? 'none' : 'block';
+  const NEXTS = ['없음','견적 발송','재통화 필요','예약 진행'];
+  list.forEach(c=>{
+    const d = new Date(c.ts);
+    const tr = document.createElement('tr');
+    tr.innerHTML =
+      `<td style="white-space:nowrap;color:var(--steel);">${d.getMonth()+1}/${d.getDate()} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}</td>`+
+      `<td style="font-weight:700;">${esc(c.name||'-')}</td>`+
+      `<td style="white-space:nowrap;">${esc(c.tel||'-')}</td>`+
+      `<td>${esc(c.note||'')}</td>`+
+      `<td><select class="rsv-status" data-s="${c.next==='예약 진행'?'확정':c.next==='없음'?'취소':'대기'}">${NEXTS.map(s=>`<option${s===(c.next||'없음')?' selected':''}>${s}</option>`).join('')}</select></td>`+
+      `<td style="white-space:nowrap;"><button class="rsv-act load">견적 작성</button><button class="rsv-act del">삭제</button></td>`;
+    tr.querySelector('.rsv-status').addEventListener('change', e=>{
+      const all=getCalls(); const i=all.findIndex(x=>x.id===c.id);
+      if(i>=0){ all[i].next=e.target.value; setCalls(all); e.target.dataset.s = e.target.value==='예약 진행'?'확정':e.target.value==='없음'?'취소':'대기'; }
+    });
+    tr.querySelector('.rsv-act.load').addEventListener('click', ()=>{
+      if(c.name) $('custName').value = c.name;
+      render(); switchTab('quote');
+      toast(`${c.name||'고객'}님 정보로 견적 작성으로 이동했습니다`);
+    });
+    tr.querySelector('.rsv-act.del').addEventListener('click', ()=>{
+      if(!confirm('이 통화 기록을 삭제할까요?')) return;
+      setCalls(getCalls().filter(x=>x.id!==c.id)); renderCalls();
+    });
+    tb.appendChild(tr);
+  });
+}
+$('clSearch').addEventListener('input', renderCalls);
+$('clAddBtn').addEventListener('click', ()=>{
+  const name=$('cl_name').value.trim(), tel=$('cl_tel').value.trim(), note=$('cl_note').value.trim();
+  if(!name && !note){ toast('고객명 또는 통화 내용을 입력해주세요', true); return; }
+  const all = getCalls();
+  all.unshift({id:'c'+Date.now(), ts:Date.now(), name, tel, note, next:$('cl_next').value});
+  setCalls(all);
+  ['cl_name','cl_tel','cl_note'].forEach(id=>$(id).value='');
+  $('cl_next').value='없음';
+  renderCalls();
+  toast('통화 기록이 추가되었습니다');
+});
+
+/* ---- 매출분석 (예약 데이터 기준) ---- */
+function renderSales(){
+  const list = getReservations();
+  const conf = list.filter(r=>r.status==='확정');
+  const wait = list.filter(r=>(r.status||'대기')==='대기');
+  const sum = a=>a.reduce((s,r)=>s+(r.total||0),0);
+  const confSum = sum(conf), waitSum = sum(wait);
+  const unpaid = sum(conf.filter(r=>(r.pay||'미수')!=='완납'));
+  const confPax = conf.reduce((s,r)=>s+(r.pax||0),0);
+  const cards = [
+    {k:'전체 예약', v:`${list.length}건`, s:`취소 ${list.filter(r=>r.status==='취소').length}건 포함`},
+    {k:'확정 매출', v:fmt(confSum), s:`확정 ${conf.length}건 · ${confPax}명`},
+    {k:'대기 예상액', v:fmt(waitSum), s:`대기 ${wait.length}건`},
+    {k:'확정 미수금', v:fmt(unpaid), s:`완납 ${conf.filter(r=>r.pay==='완납').length}건 / 확정 ${conf.length}건`},
+  ];
+  $('salesCards').innerHTML = cards.map(c=>`<div class="stat-card"><div class="sc-k">${c.k}</div><div class="sc-v">${c.v}</div><div class="sc-s">${c.s}</div></div>`).join('');
+
+  /* 월별 매출 (확정, 출발일 기준·없으면 접수일) */
+  const byMonth = {};
+  conf.forEach(r=>{
+    const d = r.startDate ? new Date(r.startDate+'T00:00:00') : new Date(r.ts);
+    if(isNaN(d)) return;
+    const k = `${d.getFullYear()}.${String(d.getMonth()+1).padStart(2,'0')}`;
+    byMonth[k] = (byMonth[k]||0) + (r.total||0);
+  });
+  const mk = Object.keys(byMonth).sort();
+  const mmax = Math.max(1, ...mk.map(k=>byMonth[k]));
+  $('salesMonthly').innerHTML = mk.map(k=>
+    `<div class="bar-row"><span class="bl">${k}</span><div class="bar-track"><div class="bar-fill" style="width:${Math.round(byMonth[k]/mmax*100)}%"></div></div><span class="bv">${fmt(byMonth[k])}</span></div>`).join('');
+  $('salesMonthlyEmpty').style.display = mk.length ? 'none' : 'block';
+
+  /* 선박별 (취소 제외 건수 · 확정 매출) */
+  const byShip = {};
+  list.filter(r=>r.status!=='취소').forEach(r=>{
+    const k = r.ship||'-';
+    byShip[k] = byShip[k]||{cnt:0, sum:0};
+    byShip[k].cnt++;
+    if(r.status==='확정') byShip[k].sum += (r.total||0);
+  });
+  const sk = Object.keys(byShip);
+  const smax = Math.max(1, ...sk.map(k=>byShip[k].sum));
+  $('salesByShip').innerHTML = sk.length
+    ? sk.map(k=>`<div class="bar-row"><span class="bl">${esc(k)}</span><div class="bar-track"><div class="bar-fill" style="width:${Math.round(byShip[k].sum/smax*100)}%"></div></div><span class="bv">${byShip[k].cnt}건 · ${fmt(byShip[k].sum)}</span></div>`).join('')
+    : '<div class="rsv-empty" style="padding:20px;">집계할 예약이 없습니다.</div>';
+}
 
 /* ---- 진입 처리: 고객용 뷰 / 사전정보 링크 / 마지막 탭 ---- */
 (function initShell(){
