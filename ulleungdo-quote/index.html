@@ -56,14 +56,6 @@ body{
 }
 .erp-logo{font-weight:800;font-size:15.5px;color:var(--sea-deep);display:flex;align-items:center;gap:7px;white-space:nowrap;}
 .erp-logo .lg-badge{font-size:9.5px;letter-spacing:1.5px;color:var(--wave-green-dark);font-weight:800;background:var(--wave-green-bg);padding:2px 7px;border-radius:9999px;}
-.erp-tabs{display:flex;gap:2px;overflow-x:auto;height:100%;-webkit-overflow-scrolling:touch;}
-.erp-tabs button{
-  border:none;background:none;font-family:inherit;font-size:14px;font-weight:700;color:var(--steel);
-  padding:0 15px;height:100%;cursor:pointer;position:relative;white-space:nowrap;
-}
-.erp-tabs button:hover{color:var(--sea-deep);}
-.erp-tabs button.active{color:var(--sea-deep);}
-.erp-tabs button.active::after{content:'';position:absolute;left:10px;right:10px;bottom:0;height:3px;border-radius:3px 3px 0 0;background:var(--wave-green);}
 .erp-body{display:flex;align-items:stretch;min-height:calc(100vh - 56px);}
 .erp-side{
   width:198px;flex-shrink:0;background:#fff;border-right:1px solid var(--hairline);
@@ -140,7 +132,6 @@ header.top .eyebrow,.panel-hero .eyebrow{color:var(--acc-lite);}
 .breakdown div span:last-child{color:var(--acc-lite);}
 .ticket .dday{background:var(--acc-lite);color:#1E2B4D;}
 .stickybar .s-amt{color:var(--acc-lite);}
-.erp-tabs button.active::after{background:var(--wave-green-dark);}
 .erp-side button.active{color:var(--wave-green-dark);}
 
 /* ===== 사전정보 · 예약관리 공통 ===== */
@@ -550,13 +541,7 @@ footer.note{text-align:center;color:var(--steel);font-size:12px;margin-top:26px;
 
 <header class="erp-top">
   <div class="erp-logo">🏝️ 굿투어 <span class="lg-badge">ERP</span></div>
-  <nav class="erp-tabs" id="erpTabs">
-    <button type="button" data-tab="dash">Dashboard</button>
-    <button type="button" data-tab="customer">고객</button>
-    <button type="button" data-tab="quote" class="active">견적계산</button>
-    <button type="button" data-tab="reserve">예약관리</button>
-    <button type="button" data-tab="sales">정산·매출</button>
-  </nav>
+  <span style="margin-left:auto;font-size:12px;color:var(--stone);font-weight:600;">울릉도 여행 관리 시스템</span>
 </header>
 
 <div class="erp-body">
@@ -2462,8 +2447,6 @@ function renderSide(sub){
 }
 function switchTab(sub){
   if(!SUB_TO_TAB[sub]) sub = 'dash';
-  const tab = SUB_TO_TAB[sub];
-  document.querySelectorAll('.erp-tabs button').forEach(b=> b.classList.toggle('active', b.dataset.tab===tab));
   ALL_SUBS.forEach(s=>{ const p=$('tab-'+s); if(p) p.classList.toggle('active', s===sub); });
   renderSide(sub);
   $('stickybar').style.display = sub==='quote' ? '' : 'none';
@@ -2474,7 +2457,6 @@ function switchTab(sub){
   window.scrollTo({top:0});
   try{ localStorage.setItem('gt_active_tab', sub); }catch(e){}
 }
-document.querySelectorAll('.erp-tabs button').forEach(b=> b.addEventListener('click', ()=> switchTab(NAV[b.dataset.tab].items[0].id)));
 
 /* ---- 사전정보: 제출 → 담당자 전달용 링크/텍스트 ---- */
 function collectIntake(){
