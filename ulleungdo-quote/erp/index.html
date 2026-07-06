@@ -542,6 +542,7 @@ const ICONS={
   gear:'M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM19.4 15a7.9 7.9 0 0 0 .1-3l2-1.5-2-3.5-2.4 1a8 8 0 0 0-2.6-1.5L14 1h-4l-.5 2.5A8 8 0 0 0 7 5L4.6 4l-2 3.5L4.5 9a7.9 7.9 0 0 0 0 3l-2 1.5 2 3.5 2.5-1a8 8 0 0 0 2.6 1.5L10 23h4l.5-2.5a8 8 0 0 0 2.6-1.5l2.4 1 2-3.5z',
   search:'M21 21l-4.35-4.35M11 19a8 8 0 1 0 0-16 8 8 0 0 0 0 16z',
   plus:'M12 5v14M5 12h14', ship:'M3 14l1.5 5h15L21 14M5 14V8h14v6M12 3v5M8 21h8', bell:'M18 8a6 6 0 1 0-12 0c0 7-3 9-3 9h18s-3-2-3-9M13.7 21a2 2 0 0 1-3.4 0',
+  calc:'M6 2h12a1 1 0 0 1 1 1v18a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1zM8 6h8M8 11h.01M12 11h.01M16 11h.01M8 15h.01M12 15h.01M16 15v3M8 18h4',
   back:'M19 12H5M12 19l-7-7 7-7', box:'M21 8l-9-5-9 5 9 5 9-5zM3 8v8l9 5 9-5V8'
 };
 function ic(name,cls){ return `<svg class="${cls||'ic'}" viewBox="0 0 24 24"><path d="${ICONS[name]||''}"/></svg>`; }
@@ -590,10 +591,10 @@ const NAV=[
   {id:'quote_new',label:'자동견적',icon:'plus',route:'#/quotes/new'},
   {id:'quotes',label:'견적내역',icon:'doc',route:'#/quotes'},
   {id:'reservations',label:'예약/문자',icon:'calendar',route:'#/reservations'},
-  {sec:true, label:'회계'},
+  {sec:true, head:{id:'payments',label:'회계',icon:'calc',route:'#/payments'}},
   {id:'payments',label:'입금/정산',icon:'card',route:'#/payments'},
   {id:'analytics',label:'매출분석',icon:'chart',route:'#/analytics'},
-  {sec:true, label:'관리'},
+  {sec:true, head:{id:'settings',label:'관리',icon:'gear',route:'#/settings'}},
   {id:'settings',label:'설정',icon:'gear',route:'#/settings'},
 ];
 
@@ -647,21 +648,25 @@ function render(){
 function renderShell(app){
   const u=session();
   const act=activeNavId();
-  let navHtml=''; let openSec=false;
-  NAV.forEach(n=>{
-    if(n.sec){
-      if(openSec) navHtml+='</div>';
-      if(n.label) navHtml+=`<div class="sb-group">${n.label}</div>`;
-      navHtml+='<div class="sb-section">';
-      if(n.head){ const h=n.head; navHtml+=`<a class="sb-head ${act===h.id?'active':''}" href="${h.route}" onclick="closeSidebar()">${ic(h.icon)}<span>${h.label}</span></a>`; }
-      openSec=true; return;
-    }
-    let badge='';
-    if(n.id==='consultations'){ const c=DB.consultations.filter(x=>x.next_contact_at&&x.next_contact_at.slice(0,10)<=todayISO()&&x.status!=='done').length; if(c) badge=`<span class="badge-n">${c}</span>`; }
-    if(n.id==='payments'){ const c=DB.reservations.filter(r=>resBalance(r)>0&&['confirmed','balance_requested','deposit_paid','ready'].includes(r.status)).length; if(c) badge=`<span class="badge-n">${c}</span>`; }
-    navHtml+=`<a class="sb-item ${act===n.id?'active':''}" href="${n.route}" onclick="closeSidebar()">${ic(n.icon)}<span>${n.label}</span>${badge}</a>`;
-  });
-  if(openSec) navHtml+='</div>';
+  // NAV를 섹션 단위로 그룹화 (헤드 + 하위 항목)
+  const sections=[]; let cur=null;
+  NAV.forEach(n=>{ if(n.sec){ cur={head:n.head||null,label:n.label||null,items:[]}; sections.push(cur); } else if(cur){ cur.items.push(n); } });
+  const navBadge=id=>{
+    if(id==='consultations'){ const c=DB.consultations.filter(x=>x.next_contact_at&&x.next_contact_at.slice(0,10)<=todayISO()&&x.status!=='done').length; return c?`<span class="badge-n">${c}</span>`:''; }
+    if(id==='payments'){ const c=DB.reservations.filter(r=>resBalance(r)>0&&['confirmed','balance_requested','deposit_paid','ready'].includes(r.status)).length; return c?`<span class="badge-n">${c}</span>`:''; }
+    return '';
+  };
+  const navHtml=sections.map(s=>{
+    const memberIds=[...(s.head?[s.head.id]:[]),...s.items.map(i=>i.id)];
+    const secActive=memberIds.includes(act);
+    let html='';
+    if(s.label) html+=`<div class="sb-group">${s.label}</div>`;
+    html+=`<div class="sb-section">`;
+    if(s.head){ const h=s.head; html+=`<a class="sb-head ${secActive?'active':''}" href="${h.route}" onclick="closeSidebar()">${ic(h.icon)}<span>${h.label}</span></a>`; }
+    html+=s.items.map(n=>`<a class="sb-item ${act===n.id?'active':''}" href="${n.route}" onclick="closeSidebar()">${ic(n.icon)}<span>${n.label}</span>${navBadge(n.id)}</a>`).join('');
+    html+=`</div>`;
+    return html;
+  }).join('');
   app.innerHTML=`
   <div class="scrim" id="scrim" onclick="closeSidebar()"></div>
   <div class="app">
