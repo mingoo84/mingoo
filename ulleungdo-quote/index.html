@@ -8,33 +8,34 @@
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
 <style>
 /* ============================================================
-   울릉도 바다 테마 — 디자인 토큰
+   ERP 블루 테마 — 디자인 토큰 (변수명은 기존 유지, 값만 교체)
    ============================================================ */
 :root{
-  --sea-deep:#04263b;
-  --sea-mid:#0a3d55;
-  --sea-line:#123f58;
-  --wave-green:#00e88f;
-  --wave-green-dark:#00785c;
-  --wave-green-soft:#d2f7e6;
-  --wave-green-bg:#e8fbf2;
-  --pressed:#009a68;
+  --sea-deep:#22304E;        /* 딥 네이비 (다크 서피스·헤더) */
+  --sea-mid:#2C4066;
+  --sea-line:#31456F;
+  --wave-green:#4A79FF;      /* 프라이머리 블루 */
+  --wave-green-dark:#2B55D8; /* 블루 딥 (링크·강조 텍스트) */
+  --wave-green-soft:#D8E3FE; /* 소프트 칩 보더 */
+  --wave-green-bg:#EEF3FF;   /* 소프트 블루 배경 */
+  --pressed:#1F41B8;
   --canvas:#ffffff;
-  --surface:#f7faf9;
-  --surface-soft:#f1f5f4;
-  --hairline:#e2e8e6;
-  --hairline-strong:#c3cfcb;
-  --ink:#0b2533;
-  --slate:#41586b;
-  --steel:#5f7385;
-  --stone:#8fa0ae;
+  --surface:#F9FAFC;
+  --surface-soft:#F2F4F8;
+  --hairline:#E4E8F0;
+  --hairline-strong:#C7D0DE;
+  --ink:#1E2A3C;
+  --slate:#3E4C63;
+  --steel:#5D6B82;
+  --stone:#8D99AC;
   --on-dark:#ffffff;
-  --on-dark-muted:#9db4c0;
+  --on-dark-muted:#9FB0CE;
   --warn-bg:#fff7e0;
   --warn-text:#8a6a2f;
   --danger:#e05252;
+  --acc-lite:#9DB9FF;        /* 다크 배경 위 밝은 블루 액센트 */
   --radius:14px;
-  --shadow:0 2px 14px rgba(4,38,59,.07);
+  --shadow:0 2px 14px rgba(23,33,60,.08);
 }
 *{box-sizing:border-box;}
 html{-webkit-text-size-adjust:100%;}
@@ -103,14 +104,28 @@ body.customer-view .erp-top,body.customer-view .erp-side{display:none;}
 /* 결제상태 칩 */
 table.rsv select.rsv-pay{border:1.5px solid var(--hairline);border-radius:8px;padding:5px 8px;font-family:inherit;font-size:12px;font-weight:800;-webkit-appearance:none;appearance:none;}
 table.rsv select.rsv-pay[data-s="미수"]{color:var(--danger);background:#fdeaea;}
-table.rsv select.rsv-pay[data-s="완납"]{color:var(--wave-green-dark);background:var(--wave-green-bg);}
+table.rsv select.rsv-pay[data-s="완납"]{color:#0E9F6E;background:#E7F6EF;}
 table.rsv select.rsv-pay[data-s="과납"]{color:var(--warn-text);background:var(--warn-bg);}
+
+/* ===== ERP 블루 테마 대비 보정 ===== */
+.btn.primary{color:#fff;}
+.btn.primary:active{color:#fff;}
+.stickybar .s-btn{color:#fff;}
+.price-save-btn.saved{color:#fff;}
+header.top .eyebrow,.panel-hero .eyebrow{color:var(--acc-lite);}
+.ticket .route .arrow{color:var(--acc-lite);}
+.ticket .total-box .amount{color:var(--acc-lite);}
+.breakdown div span:last-child{color:var(--acc-lite);}
+.ticket .dday{background:var(--acc-lite);color:#1E2B4D;}
+.stickybar .s-amt{color:var(--acc-lite);}
+.erp-tabs button.active::after{background:var(--wave-green-dark);}
+.erp-side button.active{color:var(--wave-green-dark);}
 
 /* ===== 사전정보 · 예약관리 공통 ===== */
 .admin-wrap{max-width:1180px;margin:0 auto;padding:20px 14px 60px;}
 @media(min-width:961px){ .admin-wrap{padding:28px 20px 80px;} }
 .panel-hero{
-  background:linear-gradient(135deg,var(--sea-deep) 0%,#06344c 60%,#0a4a63 100%);
+  background:linear-gradient(135deg,#22304E 0%,#2A3C63 60%,#33518F 100%);
   border-radius:var(--radius);padding:22px 22px 24px;color:var(--on-dark);margin-bottom:16px;
 }
 .panel-hero .eyebrow{font-size:11px;letter-spacing:1.6px;text-transform:uppercase;color:var(--wave-green);font-weight:700;margin-bottom:7px;}
@@ -142,7 +157,7 @@ table.rsv .rsv-act.del{color:var(--danger);}
 @media(min-width:961px){ .wrap{padding:28px 20px 60px;} body{padding-bottom:0;} }
 
 header.top{
-  background:linear-gradient(135deg,var(--sea-deep) 0%,#06344c 60%,#0a4a63 100%);
+  background:linear-gradient(135deg,#22304E 0%,#2A3C63 60%,#33518F 100%);
   border-radius:var(--radius);
   padding:22px 22px 26px;
   color:var(--on-dark);
@@ -212,7 +227,7 @@ header.top p{margin:0;color:var(--on-dark-muted);font-size:13px;max-width:560px;
   background-image:url("data:image/svg+xml,%3Csvg width='12' height='8' viewBox='0 0 12 8' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1.5L6 6.5L11 1.5' stroke='%235f7385' stroke-width='1.8' stroke-linecap='round'/%3E%3C/svg%3E");
   background-repeat:no-repeat;background-position:right 13px center;padding-right:34px;
 }
-.field input:focus,.field select:focus{border-color:var(--wave-green-dark);box-shadow:0 0 0 3px rgba(0,232,143,.15);}
+.field input:focus,.field select:focus{border-color:var(--wave-green-dark);box-shadow:0 0 0 3px rgba(74,121,255,.16);}
 .field input[readonly]{background:var(--surface-soft);color:var(--steel);}
 .field input:disabled,.field select:disabled{
   background-color:var(--surface-soft);color:var(--stone);border-color:var(--hairline);
@@ -297,7 +312,7 @@ select.tier-group{
 /* 커스텀 자동완성 드롭다운 */
 .ac-menu{
   position:absolute;z-index:70;background:var(--canvas);
-  border:1.5px solid var(--hairline-strong);border-radius:10px;box-shadow:0 6px 20px rgba(4,38,59,.18);
+  border:1.5px solid var(--hairline-strong);border-radius:10px;box-shadow:0 6px 20px rgba(23,33,60,.18);
   max-height:210px;overflow-y:auto;display:none;-webkit-overflow-scrolling:touch;
   max-width:min(260px,86vw);
 }
@@ -354,13 +369,13 @@ select.tier-group{
 
 /* 티켓 */
 .ticket{
-  background:linear-gradient(160deg,var(--sea-deep) 0%,#06344c 100%);
+  background:linear-gradient(160deg,#22304E 0%,#2E4370 100%);
   color:var(--on-dark);
   border-radius:18px;
   position:relative;
   padding:22px 20px 18px;
   overflow:visible;
-  box-shadow:0 8px 28px rgba(4,38,59,.25);
+  box-shadow:0 8px 28px rgba(23,33,60,.28);
 }
 .ticket .route-wrap{position:relative;margin-bottom:15px;}
 .ticket .stub-hole{position:absolute;bottom:-11px;width:22px;height:22px;background:var(--surface-soft);border-radius:50%;}
@@ -415,7 +430,7 @@ select.tier-group{
   border:1.5px solid var(--hairline);border-radius:12px;padding:14px;text-decoration:none;color:var(--ink);
   display:block;transition:.15s;background:var(--canvas);
 }
-.ship-card:active,.ship-card:hover{border-color:var(--wave-green-dark);box-shadow:0 2px 10px rgba(0,120,92,.12);}
+.ship-card:active,.ship-card:hover{border-color:var(--wave-green-dark);box-shadow:0 2px 10px rgba(43,85,216,.12);}
 .ship-card .sname{font-weight:700;font-size:14px;margin-bottom:3px;}
 .ship-card .sdesc{font-size:12px;color:var(--steel);margin-bottom:9px;line-height:1.5;}
 .ship-card .go{font-size:12px;color:var(--wave-green-dark);font-weight:700;}
@@ -458,14 +473,14 @@ select.tier-group{
 }
 #docSheet .doc-hero{
   position:relative;height:110px;overflow:hidden;
-  background:linear-gradient(120deg,#04263b 0%,#0a3d55 55%,#0d5a74 100%);
+  background:linear-gradient(120deg,#22304E 0%,#2C4066 55%,#33518F 100%);
   display:flex;align-items:center;justify-content:center;
 }
 #docSheet .doc-hero svg.island{position:absolute;left:0;right:0;bottom:0;width:100%;}
 #docSheet .doc-hero .doc-hero-title{
   position:relative;color:#fff;font-size:20px;font-weight:800;text-align:center;letter-spacing:.01em;line-height:1.45;
 }
-#docSheet .doc-hero .doc-hero-title small{display:block;font-size:11px;font-weight:600;color:#7fe8c0;letter-spacing:2.5px;margin-bottom:3px;}
+#docSheet .doc-hero .doc-hero-title small{display:block;font-size:11px;font-weight:600;color:var(--acc-lite);letter-spacing:2.5px;margin-bottom:3px;}
 #docSheet .doc-info-table{width:100%;border-collapse:collapse;font-size:12.5px;}
 #docSheet .doc-info-table td{border:1px solid var(--hairline-strong);padding:8px 10px;}
 #docSheet .doc-info-table td.lbl{background:var(--surface-soft);font-weight:800;width:70px;white-space:nowrap;}
@@ -483,10 +498,10 @@ select.tier-group{
 /* 모바일 하단 고정 바 */
 .stickybar{
   position:fixed;left:0;right:0;bottom:0;z-index:50;
-  background:rgba(4,38,59,.97);backdrop-filter:blur(8px);
+  background:rgba(30,43,77,.97);backdrop-filter:blur(8px);
   padding:12px 16px calc(12px + env(safe-area-inset-bottom));
   display:flex;align-items:center;justify-content:space-between;gap:14px;
-  box-shadow:0 -4px 20px rgba(4,38,59,.3);
+  box-shadow:0 -4px 20px rgba(23,33,60,.35);
 }
 .stickybar .s-label{font-size:10.5px;color:var(--on-dark-muted);letter-spacing:.05em;}
 .stickybar .s-amt{font-size:21px;font-weight:800;color:var(--wave-green);font-variant-numeric:tabular-nums;letter-spacing:-.4px;}
@@ -639,7 +654,7 @@ footer.note{text-align:center;color:var(--steel);font-size:12px;margin-top:26px;
     <div class="eyebrow">GOOD TOUR · 울릉도 견적 계산기 v4</div>
     <h1>클릭 몇 번으로 끝나는<br>울릉도 견적서</h1>
     <p>일자·인원·선박·투어·숙박만 고르면 금액과 견적서가 자동 완성됩니다. 문구는 카카오톡·문자로 바로 복사, 이미지는 PNG로 저장하세요. 입력 내용은 자동 저장됩니다.</p>
-    <svg class="waves" viewBox="0 0 1200 60" preserveAspectRatio="none" height="46" xmlns="http://www.w3.org/2000/svg"><path d="M0,30 C150,55 300,5 450,30 C600,55 750,5 900,30 C1050,55 1150,15 1200,25 L1200,60 L0,60 Z" fill="rgba(0,232,143,.10)"/><path d="M0,42 C180,20 380,58 560,38 C740,18 920,56 1200,36 L1200,60 L0,60 Z" fill="rgba(0,232,143,.07)"/></svg>
+    <svg class="waves" viewBox="0 0 1200 60" preserveAspectRatio="none" height="46" xmlns="http://www.w3.org/2000/svg"><path d="M0,30 C150,55 300,5 450,30 C600,55 750,5 900,30 C1050,55 1150,15 1200,25 L1200,60 L0,60 Z" fill="rgba(122,157,255,.14)"/><path d="M0,42 C180,20 380,58 560,38 C740,18 920,56 1200,36 L1200,60 L0,60 Z" fill="rgba(122,157,255,.10)"/></svg>
   </header>
 
   <div class="grid">
@@ -964,8 +979,8 @@ footer.note{text-align:center;color:var(--steel);font-size:12px;margin-top:26px;
       <div id="docSheet">
         <div class="doc-hero">
           <svg class="island" viewBox="0 0 820 70" height="70" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M0,50 L240,50 C280,50 300,22 340,18 C370,15 385,8 410,8 C435,8 450,15 480,18 C520,22 540,50 580,50 L820,50 L820,70 L0,70 Z" fill="rgba(4,38,59,.55)"/>
-            <path d="M0,56 C140,44 300,66 460,54 C620,42 730,62 820,52 L820,70 L0,70 Z" fill="rgba(0,232,143,.20)"/>
+            <path d="M0,50 L240,50 C280,50 300,22 340,18 C370,15 385,8 410,8 C435,8 450,15 480,18 C520,22 540,50 580,50 L820,50 L820,70 L0,70 Z" fill="rgba(30,43,77,.55)"/>
+            <path d="M0,56 C140,44 300,66 460,54 C620,42 730,62 820,52 L820,70 L0,70 Z" fill="rgba(122,157,255,.22)"/>
             <path d="M0,62 C180,52 360,70 540,60 C680,53 760,66 820,60 L820,70 L0,70 Z" fill="rgba(255,255,255,.10)"/>
           </svg>
           <div class="doc-hero-title"><small>GOOD TOUR · ULLEUNGDO</small>현지 여행사 굿투어 · 울릉도여행 일정 및 견적서</div>
