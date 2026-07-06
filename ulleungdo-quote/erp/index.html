@@ -1363,9 +1363,12 @@ function renderQuotePreview(app,id){
   app.innerHTML=`
   <div style="max-width:640px;margin:0 auto;padding:24px 16px;">
     <div class="card">
-      <div style="background:var(--blue);color:#fff;padding:24px 26px;border-radius:12px 12px 0 0;">
-        <div style="font-size:13px;opacity:.85;">${DB.settings.company_name}</div>
-        <div style="font-size:22px;font-weight:800;margin-top:4px;">울릉도 여행 견적서</div>
+      <div style="background:#fff;padding:15px 24px;border-radius:12px 12px 0 0;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:10px;">
+        ${gtLogo(34)}
+        <span style="font-size:12px;color:var(--muted);">${DB.settings.company_name}</span>
+      </div>
+      <div style="background:var(--blue);color:#fff;padding:20px 26px;">
+        <div style="font-size:22px;font-weight:800;">울릉도 여행 견적서</div>
         <div style="font-size:12.5px;opacity:.85;margin-top:8px;">${q.quote_number} · 유효기간 ${fmtDate(q.valid_until)}</div>
       </div>
       <div class="card-pad">
@@ -2065,6 +2068,7 @@ function renderPublicForm(app,token){
   if(form.status==='submitted'){ app.innerHTML=publicMsg('이미 제출되었습니다','예약정보가 정상 접수되었습니다. 담당자가 곧 연락드리겠습니다.',true); return; }
   const c=custById(form.customer_id);
   app.innerHTML=`<div class="pub">
+    <div style="background:#fff;padding:13px 24px;border-bottom:1px solid var(--border);">${gtLogo(30)}</div>
     <div class="pub-hero"><h1>굿투어 예약정보 입력</h1><p>${DB.settings.company_name} · 울릉도 여행</p></div>
     <div class="pub-body">
       <div class="stepper"><span class="s on">대표자</span>›<span class="s">일정</span>›<span class="s">인원</span>›<span class="s">희망사항</span>›<span class="s">동의</span></div>
@@ -2096,7 +2100,7 @@ function renderPublicForm(app,token){
   </div>`;
 }
 function publicMsg(title,msg,ok){
-  return `<div class="pub"><div class="pub-hero" style="background:${ok?'var(--success)':'var(--blue)'}"><h1>${title}</h1></div><div class="pub-body"><div class="pub-sec" style="text-align:center;padding:36px 18px"><div style="font-size:40px;margin-bottom:12px">${ok?'✓':'!'}</div><p style="color:var(--muted);line-height:1.6">${msg}</p></div></div></div>`;
+  return `<div class="pub"><div style="background:#fff;padding:13px 24px;border-bottom:1px solid var(--border);">${gtLogo(30)}</div><div class="pub-hero" style="background:${ok?'var(--success)':'var(--blue)'}"><h1>${title}</h1></div><div class="pub-body"><div class="pub-sec" style="text-align:center;padding:36px 18px"><div style="font-size:40px;margin-bottom:12px">${ok?'✓':'!'}</div><p style="color:var(--muted);line-height:1.6">${msg}</p></div></div></div>`;
 }
 function submitPublicForm(token){
   const form=DB.customer_forms.find(f=>f.token===token);
