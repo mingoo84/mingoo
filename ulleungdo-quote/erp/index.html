@@ -65,6 +65,14 @@ svg.ic{width:16px;height:16px;flex-shrink:0;fill:none;stroke:currentColor;stroke
   box-shadow:0 1px 2px rgba(16,24,40,.06),0 8px 16px -12px rgba(16,24,40,.18);
   margin-bottom:12px;
 }
+/* 그룹별 옅은 파스텔 그라데이션 */
+.sb-section.tone-blue{background:linear-gradient(180deg,#E9F1FF 0%,#F9FBFF 100%);border-color:#D8E6FF;}
+.sb-section.tone-teal{background:linear-gradient(180deg,#E6FAF3 0%,#F7FEFB 100%);border-color:#CDEFE2;}
+.sb-section.tone-amber{background:linear-gradient(180deg,#FEF3E2 0%,#FFFDF8 100%);border-color:#F5E2C1;}
+.sb-section.tone-violet{background:linear-gradient(180deg,#F0EAFD 0%,#FBF9FF 100%);border-color:#E2D6FB;}
+.sb-section.tone-teal .sb-head{background:linear-gradient(180deg,#D6F4E8,#E6FAF3);border-bottom-color:#CDEFE2;}
+.sb-section.tone-amber .sb-head{background:linear-gradient(180deg,#FBE8CB,#FEF3E2);border-bottom-color:#F5E2C1;}
+.sb-section.tone-violet .sb-head{background:linear-gradient(180deg,#E5D9FB,#F0EAFD);border-bottom-color:#E2D6FB;}
 .sb-head{
   display:flex;align-items:center;gap:10px;padding:10px 13px;margin:-6px -6px 6px;
   border-bottom:1px solid var(--border);border-radius:11px 11px 0 0;
@@ -594,17 +602,17 @@ function suggestStatus(res,newStatus,msg){
    라우터 & 셸
    ============================================================ */
 const NAV=[
-  {sec:true},
+  {sec:true, tone:'blue'},
   {id:'dashboard',label:'대시보드',icon:'grid',route:'#/'},
-  {sec:true, head:{id:'customers',label:'고객',icon:'users',route:'#/customers'}},
+  {sec:true, tone:'teal', head:{id:'customers',label:'고객',icon:'users',route:'#/customers'}},
   {id:'consultations',label:'상담',icon:'chat',route:'#/consultations'},
   {id:'quote_new',label:'자동견적',icon:'plus',route:'#/quotes/new'},
   {id:'quotes',label:'견적내역',icon:'doc',route:'#/quotes'},
   {id:'reservations',label:'예약/문자',icon:'calendar',route:'#/reservations'},
-  {sec:true, head:{id:'payments',label:'회계',icon:'calc',route:'#/payments'}},
+  {sec:true, tone:'amber', head:{id:'payments',label:'회계',icon:'calc',route:'#/payments'}},
   {id:'payments',label:'입금/정산',icon:'card',route:'#/payments'},
   {id:'analytics',label:'매출분석',icon:'chart',route:'#/analytics'},
-  {sec:true, head:{id:'settings',label:'관리',icon:'gear',route:'#/settings'}},
+  {sec:true, tone:'violet', head:{id:'settings',label:'관리',icon:'gear',route:'#/settings'}},
   {id:'settings',label:'설정',icon:'gear',route:'#/settings'},
 ];
 
@@ -660,7 +668,7 @@ function renderShell(app){
   const act=activeNavId();
   // NAV를 섹션 단위로 그룹화 (헤드 + 하위 항목)
   const sections=[]; let cur=null;
-  NAV.forEach(n=>{ if(n.sec){ cur={head:n.head||null,label:n.label||null,items:[]}; sections.push(cur); } else if(cur){ cur.items.push(n); } });
+  NAV.forEach(n=>{ if(n.sec){ cur={head:n.head||null,label:n.label||null,tone:n.tone||'',items:[]}; sections.push(cur); } else if(cur){ cur.items.push(n); } });
   const navBadge=id=>{
     if(id==='consultations'){ const c=DB.consultations.filter(x=>x.next_contact_at&&x.next_contact_at.slice(0,10)<=todayISO()&&x.status!=='done').length; return c?`<span class="badge-n">${c}</span>`:''; }
     if(id==='payments'){ const c=DB.reservations.filter(r=>resBalance(r)>0&&['confirmed','balance_requested','deposit_paid','ready'].includes(r.status)).length; return c?`<span class="badge-n">${c}</span>`:''; }
@@ -671,7 +679,7 @@ function renderShell(app){
     const secActive=memberIds.includes(act);
     let html='';
     if(s.label) html+=`<div class="sb-group">${s.label}</div>`;
-    html+=`<div class="sb-section">`;
+    html+=`<div class="sb-section ${s.tone?'tone-'+s.tone:''}">`;
     if(s.head){ const h=s.head; html+=`<a class="sb-head ${secActive?'active':''}" href="${h.route}" onclick="closeSidebar()">${ic(h.icon)}<span>${h.label}</span></a>`; }
     html+=s.items.map(n=>`<a class="sb-item ${act===n.id?'active':''}" href="${n.route}" onclick="closeSidebar()">${ic(n.icon)}<span>${n.label}</span>${navBadge(n.id)}</a>`).join('');
     html+=`</div>`;
