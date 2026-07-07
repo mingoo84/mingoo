@@ -97,6 +97,24 @@ svg.ic{width:16px;height:16px;flex-shrink:0;fill:none;stroke:currentColor;stroke
 .sb-item:hover .ic{transform:scale(1.15);}
 .sb-item:active{transform:translateX(3px) scale(.98);}
 .sb-item.active{background:var(--blue-soft);color:var(--blue-dark);box-shadow:inset 3px 0 0 var(--blue);}
+/* 접이식(아코디언) 하위 메뉴 */
+.sb-toggle{width:100%;border:none;background:transparent;cursor:pointer;font-family:inherit;text-align:left;}
+.sb-toggle.pactive{color:var(--blue-dark);}
+.sb-tail{margin-left:auto;display:flex;align-items:center;gap:6px;}
+.sb-toggle .chev{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round;transition:transform .2s ease;opacity:.7;}
+.sb-parent.open .sb-toggle .chev{transform:rotate(90deg);}
+.sb-toggle:hover span:not(.sb-tail){transform:none;} /* 부모는 텍스트 확대 생략(칩·화살표 정렬 유지) */
+.sb-sub{overflow:hidden;max-height:0;transition:max-height .24s ease;}
+.sb-parent.open .sb-sub{max-height:160px;}
+.sb-child{padding-left:14px;}
+.sb-child .cdot{width:5px;height:5px;border-radius:50%;background:var(--stone);flex-shrink:0;transition:background .16s ease,transform .16s ease;}
+.sb-child:hover .cdot{background:var(--blue);}
+.sb-child.active .cdot{background:var(--blue);transform:scale(1.3);}
+/* 녹취 활용 가이드 */
+.guide-step{padding:9px 0;border-bottom:1px dashed var(--border);}
+.guide-step:last-of-type{border-bottom:none;}
+.guide-step b{color:var(--ink);}
+.guide-warn{margin-top:10px;background:var(--warn-bg,#FFFAEB);border:1px solid #FDE8B5;border-radius:9px;padding:10px 12px;font-size:12.5px;line-height:1.7;color:var(--warn-text,#B54708);}
 .sb-item .ic{width:18px;height:18px;flex-shrink:0;stroke:currentColor;fill:none;stroke-width:1.9;}
 .sb-item .badge-n{margin-left:auto;background:var(--danger);color:#fff;font-size:10.5px;font-weight:700;min-width:18px;height:18px;border-radius:9px;display:flex;align-items:center;justify-content:center;padding:0 5px;}
 .sb-user{border-top:1px solid var(--border);padding:12px 14px;display:flex;align-items:center;gap:10px;}
@@ -447,10 +465,16 @@ function seed(){
     {id:'f2',customer_id:'c5',token:'formabcd',status:'sent',expires_at:addDays(T,5)+'T23:59',submitted_at:null,representative_name:'',representative_phone:'',adults:0,created_at:addDays(T,-1)+'T17:00'},
   ];
   const consultations=[
-    {id:'s1',customer_id:'c1',user_id:'u1',channel:'phone',status:'quote_needed',content:'독도 포함 2박3일 희망. 숙소는 호텔 선호. 차량 선적은 고민 중.',customer_request:'8월 초 가족여행, 성인 4 소아 1',next_action:'배편 확인 후 견적 발송',next_contact_at:T+'T15:00',priority:'important',created_at:addDays(T,-8)+'T09:40'},
+    {id:'s1',customer_id:'c1',user_id:'u1',channel:'phone',status:'quote_needed',content:'독도 포함 2박3일 희망. 숙소는 호텔 선호. 차량 선적은 고민 중.',customer_request:'8월 초 가족여행, 성인 4 소아 1',next_action:'배편 확인 후 견적 발송',next_contact_at:T+'T15:00',priority:'important',created_at:addDays(T,-8)+'T09:40',
+      call_at:addDays(T,-8)+'T09:40',recording:{filename:'20260629_김민수_상담통화.m4a',duration:372,size:3540000},
+      transcript:'상담원: 네, 굿투어입니다. 무엇을 도와드릴까요?\n고객: 8월 초에 가족여행으로 울릉도 2박3일 생각하고 있는데요, 독도도 갈 수 있나요?\n상담원: 네 독도는 날씨 좋으면 입도 가능하시고요, 성인 네 분 소아 한 분이시죠?\n고객: 네 맞아요. 숙소는 호텔로 하고 싶고, 차는 가져갈지 고민이에요.\n상담원: 차량 선적은 비용이 있어서, 렌터카랑 비교해서 안내드릴게요. 배편 확인해서 견적 문자로 보내드리겠습니다.'},
     {id:'s2',customer_id:'c2',user_id:'u2',channel:'kakao',status:'in_progress',content:'워크숍 단체 18명, 예산 1인 15만원선',customer_request:'단체 숙소 및 회의실',next_action:'단체 견적 금액안내',next_contact_at:addDays(T,1)+'T10:00',priority:'urgent',created_at:addDays(T,-6)+'T13:10'},
-    {id:'s3',customer_id:'c3',user_id:'u3',channel:'phone',status:'done',content:'가족 4명 예약 확정 완료',customer_request:'',next_action:'',next_contact_at:null,priority:'normal',created_at:addDays(T,-4)+'T15:30'},
-    {id:'s4',customer_id:'c6',user_id:'u3',channel:'phone',status:'new',content:'광주 출발, 배편 문의만 함',customer_request:'포항/후포 배편 시간',next_action:'예약정보 입력 링크 발송',next_contact_at:T+'T11:00',priority:'normal',created_at:addDays(T,-1)+'T09:35'},
+    {id:'s3',customer_id:'c3',user_id:'u3',channel:'phone',status:'done',content:'가족 4명 예약 확정 완료',customer_request:'',next_action:'',next_contact_at:null,priority:'normal',created_at:addDays(T,-4)+'T15:30',
+      call_at:addDays(T,-4)+'T15:30',recording:{filename:'20260703_최정훈_예약확정.m4a',duration:181,size:1720000},
+      transcript:'고객: 지난번 견적대로 예약할게요.\n상담원: 감사합니다. 예약금 입금해주시면 확정 처리해드리겠습니다. 출발 전에 배편·숙소 안내 문자 보내드릴게요.'},
+    {id:'s4',customer_id:'c6',user_id:'u3',channel:'phone',status:'new',content:'광주 출발, 배편 문의만 함',customer_request:'포항/후포 배편 시간',next_action:'예약정보 입력 링크 발송',next_contact_at:T+'T11:00',priority:'normal',created_at:addDays(T,-1)+'T09:35',
+      call_at:addDays(T,-1)+'T09:35',recording:{filename:'20260706_문의_배편시간.m4a',duration:96,size:910000},
+      transcript:'고객: 광주에서 가는데 포항이랑 후포 중에 어디가 나아요? 배 시간 좀 알려주세요.\n상담원: 후포가 광주에서는 조금 더 가까우실 수 있어요. 시간표 정리해서 문자로 보내드리겠습니다.'},
   ];
   // 견적 1: 김민수 (예약 전환됨)
   const quotes=[
@@ -550,6 +574,8 @@ const ICONS={
   grid:'M3 3h7v7H3zM14 3h7v7h-7zM14 14h7v7h-7zM3 14h7v7H3z',
   users:'M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75',
   chat:'M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z',
+  mic:'M12 2a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3zM5 10v1a7 7 0 0 0 14 0v-1M12 19v3M8 22h8',
+  spark:'M12 3l1.6 4.8L18 9.4l-4.4 1.6L12 16l-1.6-4.8L6 9.4l4.4-1.6zM19 14l.8 2.2L22 17l-2.2.8L19 20l-.8-2.2L16 17l2.2-.8z',
   doc:'M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8zM14 2v6h6M16 13H8M16 17H8M10 9H8',
   calendar:'M3 4h18v18H3zM3 10h18M8 2v4M16 2v4',
   card:'M1 4h22v16H1zM1 10h22',
@@ -603,7 +629,10 @@ const NAV=[
   {sec:true, tone:'blue'},
   {id:'dashboard',label:'대시보드',icon:'grid',route:'#/'},
   {sec:true, tone:'teal', head:{id:'customers',label:'고객',icon:'users',route:'#/customers'}},
-  {id:'consultations',label:'상담',icon:'chat',route:'#/consultations'},
+  {id:'consult',label:'상담',icon:'chat',children:[
+    {id:'consultations',label:'상담관리',route:'#/consultations'},
+    {id:'call_records',label:'상담내역',route:'#/call-records'},
+  ]},
   {id:'quote_new',label:'자동견적',icon:'plus',route:'#/quotes/new'},
   {id:'quotes',label:'견적내역',icon:'doc',route:'#/quotes'},
   {id:'reservations',label:'예약/문자',icon:'calendar',route:'#/reservations'},
@@ -621,13 +650,21 @@ function parseHash(){
 }
 function nav(route){ location.hash=route; }
 
+let _navOpen=new Set(['consult']); /* 사이드바 접이식 메뉴 열림 상태 */
 function activeNavId(){
   const {seg}=parseHash();
   if(seg.length===0) return 'dashboard';
   const r=seg[0];
   if(r==='quotes'){ const sub=(seg[1]||'').split('?')[0]; return sub==='new'?'quote_new':'quotes'; }
+  if(r==='call-records') return 'call_records';
   if(r==='sms') return 'reservations'; /* 문자 화면은 예약/문자 메뉴에 귀속 */
   return r;
+}
+function toggleNav(id){
+  const el=document.querySelector(`.sb-parent[data-id="${id}"]`);
+  if(!el) return;
+  const open=el.classList.toggle('open');
+  if(open) _navOpen.add(id); else _navOpen.delete(id);
 }
 
 function boot(){
@@ -651,6 +688,7 @@ function render(){
     if(route==='dashboard') renderDashboard(content);
     else if(route==='customers'){ seg[1]?renderCustomerDetail(content,seg[1]):renderCustomers(content); }
     else if(route==='consultations') renderConsultations(content);
+    else if(route==='call-records') renderCallRecords(content);
     else if(route==='quotes'){ const sub=(seg[1]||'').split('?')[0]; sub==='new'?renderQuoteBuilder(content,null):(sub?renderQuoteBuilder(content,sub):renderQuotes(content)); }
     else if(route==='reservations'){ seg[1]?renderReservationDetail(content,seg[1]):renderReservations(content); }
     else if(route==='payments') renderPayments(content);
@@ -672,14 +710,25 @@ function renderShell(app){
     if(id==='payments'){ const c=DB.reservations.filter(r=>resBalance(r)>0&&['confirmed','balance_requested','deposit_paid','ready'].includes(r.status)).length; return c?`<span class="badge-n">${c}</span>`:''; }
     return '';
   };
+  const navItem=n=>{
+    if(n.children){
+      const childActive=n.children.some(c=>c.id===act);
+      const open=_navOpen.has(n.id)||childActive;
+      return `<div class="sb-parent ${open?'open':''}" data-id="${n.id}">
+        <button type="button" class="sb-item sb-toggle ${childActive?'pactive':''}" onclick="toggleNav('${n.id}')">${ic(n.icon)}<span>${n.label}</span><span class="sb-tail">${navBadge('consultations')}<svg class="chev" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></span></button>
+        <div class="sb-sub">${n.children.map(c=>`<a class="sb-item sb-child ${act===c.id?'active':''}" href="${c.route}" onclick="closeSidebar()"><span class="cdot"></span><span>${c.label}</span></a>`).join('')}</div>
+      </div>`;
+    }
+    return `<a class="sb-item ${act===n.id?'active':''}" href="${n.route}" onclick="closeSidebar()">${ic(n.icon)}<span>${n.label}</span>${navBadge(n.id)}</a>`;
+  };
   const navHtml=sections.map(s=>{
-    const memberIds=[...(s.head?[s.head.id]:[]),...s.items.map(i=>i.id)];
+    const memberIds=[...(s.head?[s.head.id]:[]),...s.items.flatMap(i=>i.children?[i.id,...i.children.map(c=>c.id)]:[i.id])];
     const secActive=memberIds.includes(act);
     let html='';
     if(s.label) html+=`<div class="sb-group">${s.label}</div>`;
     html+=`<div class="sb-section ${s.tone?'tone-'+s.tone:''}">`;
     if(s.head){ const h=s.head; html+=`<a class="sb-head ${secActive?'active':''}" href="${h.route}" onclick="closeSidebar()">${ic(h.icon)}<span>${h.label}</span></a>`; }
-    html+=s.items.map(n=>`<a class="sb-item ${act===n.id?'active':''}" href="${n.route}" onclick="closeSidebar()">${ic(n.icon)}<span>${n.label}</span>${navBadge(n.id)}</a>`).join('');
+    html+=s.items.map(navItem).join('');
     html+=`</div>`;
     return html;
   }).join('');
@@ -1230,6 +1279,143 @@ function saveConsult(id){
   if(id){ const s=byId(DB.consultations,id); Object.assign(s,data,{updated_at:nowISO()}); toast('상담이 수정되었습니다','ok'); }
   else{ DB.consultations.unshift({id:uid(),customer_id:cust,user_id:session().id,...data,created_at:nowISO()}); toast('상담이 등록되었습니다','ok'); }
   saveDB(); closeModal(); render();
+}
+
+/* ============================================================
+   상담내역 — 굿투어 상담전화 녹취 통화 요약
+   ============================================================ */
+let _recSess={};              /* 세션 중 재생용 objectURL (미저장) */
+let _guideOpen=true;
+function fmtDur(s){ if(s==null||isNaN(s)) return '-'; s=Math.round(s); const m=Math.floor(s/60), ss=s%60; return m+':'+String(ss).padStart(2,'0'); }
+function fmtKB(b){ if(!b) return ''; return b>=1048576?(b/1048576).toFixed(1)+'MB':Math.max(1,Math.round(b/1024))+'KB'; }
+function escHtml(s){ return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+function callGuideCard(){
+  return `<div class="card" style="margin-bottom:16px;overflow:hidden;">
+    <div class="card-head" style="cursor:pointer;" onclick="_guideOpen=!_guideOpen;renderCallRecords(document.getElementById('content'))">
+      <h3 style="display:flex;align-items:center;gap:8px;">${ic('mic','ic')} 녹취파일 활용법</h3>
+      <span class="muted" style="font-size:12.5px;">${_guideOpen?'접기 ▲':'펼치기 ▼'}</span>
+    </div>
+    ${_guideOpen?`<div class="card-pad" style="padding-top:4px;font-size:13.5px;line-height:1.75;color:var(--slate);">
+      <div class="guide-step"><b>①  녹취파일 확보</b><br>굿투어 상담전화는 통화가 자동 녹음됩니다. 통화 종료 후 <b>통화 녹음함</b>에서 해당 파일을 내보내기(공유)하세요. (m4a·mp3·wav 등)</div>
+      <div class="guide-step"><b>②  텍스트 변환 + 요약</b><br>녹취파일을 음성인식 도구에 올리면 전체 텍스트와 핵심 요약이 자동 생성됩니다.<br>
+        · <b>네이버 클로바노트</b> — 무료, 한국어 특화, 자동 요약 <span class="chip" style="vertical-align:1px;">권장</span><br>
+        · 다글로(Daglo) · VITO(리턴제로) 등도 사용 가능</div>
+      <div class="guide-step"><b>③  ERP에 기록</b><br>오른쪽 위 <b>[녹취 상담 등록]</b> → 고객·통화일시 선택 → 파일 첨부 → 변환한 전체 텍스트를 <b>스크립트</b>에, 요약을 <b>통화 요약</b>에 붙여넣기.<br><b>[스크립트 → 요약 초안]</b> 버튼으로 핵심 문장을 자동 추출해 초안을 만들 수 있습니다.</div>
+      <div class="guide-step"><b>④  자동 연동</b><br>저장하면 <b>상담관리·고객 상세 상담이력</b>에도 함께 반영됩니다.</div>
+      <div class="guide-warn">⚠️ 통화 녹음·요약은 <b>고객 동의 범위</b> 내에서만 활용하고, 보관기간(여행 종료 후 1년) 경과분은 정리하세요.<br>💡 첨부 파일은 용량 문제로 브라우저에 저장되지 않고 <b>파일명·통화시간만</b> 기록됩니다. 원본 녹취는 폰·드라이브에 별도 보관하세요. 2차 백엔드에 음성인식(STT)·요약 API를 연동하면 <b>파일 업로드만으로 자동화</b>됩니다. (BACKEND-DESIGN.md)</div>
+    </div>`:''}
+  </div>`;
+}
+
+function renderCallRecords(el){
+  const recs=DB.consultations.filter(c=>c.recording).sort((a,b)=>(b.call_at||b.created_at||'').localeCompare(a.call_at||a.created_at||''));
+  el.innerHTML=`
+  <div class="page-head">
+    <div><h1>상담내역</h1><div class="sub">굿투어 상담전화 녹취 통화의 요약 기록 · 총 ${recs.length}건</div></div>
+    <div class="actions"><button class="btn btn-primary" onclick="openRecordModal()">${ic('plus','ic')} 녹취 상담 등록</button></div>
+  </div>
+  ${callGuideCard()}
+  <div class="card"><div class="tbl-wrap"><table class="tbl">
+    <thead><tr><th>고객</th><th>통화일시</th><th>통화시간</th><th>요약</th><th>녹취파일</th><th>담당자</th></tr></thead>
+    <tbody>${recs.map(c=>{const r=c.recording||{};return `
+      <tr class="clickable" onclick="openRecordDetail('${c.id}')">
+        <td class="name-cell">${custName(c.customer_id)}</td>
+        <td>${fmtDateTime(c.call_at||c.created_at)}</td>
+        <td><span class="chip">${fmtDur(r.duration)}</span></td>
+        <td style="max-width:300px;color:var(--slate);">${escHtml((c.content||'').slice(0,58))||'<span class="faint">요약 없음</span>'}${(c.content||'').length>58?'…':''}</td>
+        <td><span style="display:inline-flex;align-items:center;gap:6px;color:var(--muted);font-size:12.5px;">${ic('mic','ic')}${escHtml(r.filename||'-')}</span></td>
+        <td>${userName(c.user_id)}</td>
+      </tr>`;}).join('')||`<tr><td colspan="6" class="empty">${ic('mic')}<div>등록된 녹취 상담이 없습니다.</div><div style="font-size:12.5px;color:var(--faint);margin-top:4px;">위 [녹취 상담 등록]으로 첫 통화를 기록해 보세요.</div></td></tr>`}</tbody>
+  </table></div></div>`;
+}
+
+function openRecordModal(id,presetCust){
+  const s=id?byId(DB.consultations,id):null;
+  const rec=(s&&s.recording)||{};
+  const custOpts=DB.customers.map(c=>`<option value="${c.id}" ${(s?s.customer_id:presetCust)===c.id?'selected':''}>${c.name} (${c.phone})</option>`).join('');
+  openModal(`
+    <div class="modal-head"><h3>${s?'녹취 상담 수정':'녹취 상담 등록'}</h3><button class="x" onclick="closeModal()">×</button></div>
+    <div class="modal-body">
+      <div class="field"><label>고객 <span class="req">*</span></label><select id="rc-cust" ${s?'disabled':''}>${custOpts}</select></div>
+      <div class="form-row">
+        <div class="field"><label>통화 일시</label><input id="rc-callat" type="datetime-local" value="${s&&s.call_at?s.call_at.slice(0,16):nowISO().slice(0,16)}"></div>
+        <div class="field"><label>통화 시간 <span class="faint">(m:ss 또는 초)</span></label><input id="rc-dur" placeholder="예: 6:12" value="${rec.duration!=null?fmtDur(rec.duration):''}"></div>
+      </div>
+      <div class="field"><label>녹취파일 첨부</label>
+        <input id="rc-file" type="file" accept="audio/*" onchange="onRecFile(this)">
+        <div id="rc-fileinfo" class="muted" style="font-size:12px;margin-top:6px;">${rec.filename?`현재: ${escHtml(rec.filename)} · ${fmtDur(rec.duration)}`:'음성 파일 선택 시 파일명·길이가 기록됩니다 (파일 자체는 브라우저에 저장 안 됨).'}</div>
+        <input type="hidden" id="rc-fname" value="${escHtml(rec.filename||'')}"><input type="hidden" id="rc-fsize" value="${rec.size||''}">
+      </div>
+      <div class="field"><label>전체 스크립트 <span class="faint">(클로바노트 등 변환 텍스트)</span></label>
+        <textarea id="rc-transcript" rows="5" placeholder="음성→텍스트 변환 결과를 붙여넣으세요">${escHtml(s?s.transcript||'':'')}</textarea>
+        <button type="button" class="btn btn-sm" style="margin-top:8px;" onclick="extractSummary()">${ic('spark','ic')} 스크립트 → 요약 초안</button>
+        <span class="faint" style="font-size:11.5px;margin-left:8px;">핵심 문장 자동 추출(간이) · 자동 AI요약은 2차</span></div>
+      <div class="field"><label>통화 요약 <span class="req">*</span></label><textarea id="rc-summary" rows="3" placeholder="핵심 요약을 입력하거나 위 버튼으로 초안 생성">${escHtml(s?s.content||'':'')}</textarea></div>
+      <div class="form-row">
+        <div class="field"><label>주요 요청사항</label><input id="rc-request" value="${escHtml(s?s.customer_request||'':'')}"></div>
+        <div class="field"><label>다음 할 일</label><input id="rc-action" value="${escHtml(s?s.next_action||'':'')}"></div>
+      </div>
+      <div class="form-row">
+        <div class="field"><label>상담상태</label><select id="rc-status">${Object.entries(CONSULT_STATUS).map(([k,v])=>`<option value="${k}" ${(s?s.status:'in_progress')===k?'selected':''}>${v}</option>`).join('')}</select></div>
+        <div class="field"><label>다음 연락일</label><input id="rc-next" type="datetime-local" value="${s&&s.next_contact_at?s.next_contact_at.slice(0,16):''}"></div>
+      </div>
+    </div>
+    <div class="modal-foot"><button class="btn" onclick="closeModal()">취소</button><button class="btn btn-primary" onclick="saveRecord('${id||''}')">저장</button></div>`);
+}
+function onRecFile(input){
+  const f=input.files&&input.files[0]; if(!f) return;
+  document.getElementById('rc-fname').value=f.name;
+  document.getElementById('rc-fsize').value=f.size;
+  const info=document.getElementById('rc-fileinfo');
+  info.textContent='파일: '+f.name+' · 길이 확인 중…';
+  _recSess[f.name]=URL.createObjectURL(f);
+  const au=new Audio(); au.preload='metadata';
+  au.onloadedmetadata=()=>{ const d=Math.round(au.duration); const de=document.getElementById('rc-dur'); if(de&&!de.value) de.value=fmtDur(d); info.textContent='파일: '+f.name+' · '+fmtDur(d)+' ('+fmtKB(f.size)+') · 이 세션에서 재생 가능'; };
+  au.onerror=()=>{ info.textContent='파일: '+f.name+' ('+fmtKB(f.size)+') — 길이를 못 읽었습니다. 통화시간을 직접 입력하세요.'; };
+  au.src=_recSess[f.name];
+}
+function extractSummary(){
+  const t=(document.getElementById('rc-transcript').value||'').trim();
+  if(!t){ toast('먼저 스크립트를 붙여넣으세요','err'); return; }
+  const kw=/(희망|출발|귀가|도착|인원|명|성인|소아|유아|숙소|호텔|펜션|리조트|민박|견적|금액|예산|만원|예약|예약금|잔금|배편|후포|포항|묵호|강릉|독도|성인봉|투어|차량|렌터카|선적|날짜|월|일|캠핑|낚시|일정)/;
+  const clean=t.replace(/^\s*(상담원|상담사|직원|고객|손님|여보세요)\s*[:：]?\s*/gm,'');
+  const sents=clean.split(/[\n.!?。]+/).map(x=>x.trim()).filter(x=>x.length>=6);
+  const picked=[]; for(const s of sents){ if(kw.test(s)&&!picked.includes(s)){ picked.push(s); } if(picked.length>=5) break; }
+  const draft=(picked.length?picked:sents.slice(0,3)).map(s=>'· '+s).join('\n');
+  const sm=document.getElementById('rc-summary'); sm.value=draft; sm.focus();
+  toast('핵심 문장을 추출했습니다. 확인 후 다듬어 주세요','ok');
+}
+function saveRecord(id){
+  const cust=document.getElementById('rc-cust').value;
+  const summary=document.getElementById('rc-summary').value.trim();
+  if(!summary){ toast('통화 요약을 입력하세요','err'); return; }
+  let dr=(document.getElementById('rc-dur').value||'').trim(), dur=null;
+  if(dr){ if(dr.includes(':')){ const p=dr.split(':').map(Number); dur=(p[0]||0)*60+(p[1]||0); } else dur=parseInt(dr,10)||null; }
+  const data={ channel:'phone', status:document.getElementById('rc-status').value, content:summary,
+    transcript:document.getElementById('rc-transcript').value.trim(),
+    customer_request:document.getElementById('rc-request').value.trim(), next_action:document.getElementById('rc-action').value.trim(),
+    next_contact_at:document.getElementById('rc-next').value||null, call_at:document.getElementById('rc-callat').value||nowISO(),
+    recording:{ filename:document.getElementById('rc-fname').value||'(파일 미첨부)', duration:dur, size:parseInt(document.getElementById('rc-fsize').value,10)||null } };
+  if(id){ const s=byId(DB.consultations,id); Object.assign(s,data,{updated_at:nowISO()}); toast('녹취 상담이 수정되었습니다','ok'); }
+  else{ DB.consultations.unshift({id:uid(),customer_id:cust,user_id:session().id,priority:'normal',...data,created_at:nowISO()}); toast('녹취 상담이 등록되었습니다','ok'); }
+  saveDB(); closeModal(); render();
+}
+function openRecordDetail(id){
+  const s=byId(DB.consultations,id); const rec=s.recording||{}; const url=_recSess[rec.filename];
+  openModal(`
+    <div class="modal-head"><h3>녹취 상담 · ${custName(s.customer_id)}</h3><button class="x" onclick="closeModal()">×</button></div>
+    <div class="modal-body">
+      <div class="kv"><div class="k">통화일시</div><div class="v">${fmtDateTime(s.call_at||s.created_at)}</div></div>
+      <div class="kv"><div class="k">통화시간</div><div class="v">${fmtDur(rec.duration)}</div></div>
+      <div class="kv"><div class="k">녹취파일</div><div class="v">${escHtml(rec.filename||'-')}${rec.size?` <span class="faint">(${fmtKB(rec.size)})</span>`:''}</div></div>
+      ${url?`<audio controls src="${url}" style="width:100%;margin:10px 0;"></audio>`:`<div class="muted" style="font-size:12px;margin:8px 0;background:var(--surface-soft);padding:8px 10px;border-radius:8px;">※ 원본 파일은 브라우저에 저장되지 않습니다. 이 세션에서 파일을 다시 첨부하면 재생됩니다.</div>`}
+      <div style="margin-top:12px;"><div class="k" style="font-size:12px;color:var(--faint);margin-bottom:4px;">통화 요약</div><div style="background:var(--surface-soft);border:1px solid var(--border);border-radius:8px;padding:10px 12px;font-size:13.5px;line-height:1.7;">${escHtml(s.content||'-').replace(/\n/g,'<br>')}</div></div>
+      ${s.transcript?`<div style="margin-top:12px;"><div class="k" style="font-size:12px;color:var(--faint);margin-bottom:4px;">전체 스크립트</div><div style="background:#fff;border:1px solid var(--border);border-radius:8px;padding:10px 12px;font-size:13px;line-height:1.7;max-height:220px;overflow:auto;white-space:pre-wrap;">${escHtml(s.transcript)}</div></div>`:''}
+      ${s.customer_request?`<div class="kv" style="margin-top:12px;"><div class="k">주요 요청</div><div class="v">${escHtml(s.customer_request)}</div></div>`:''}
+      ${s.next_action?`<div class="kv"><div class="k">다음 할 일</div><div class="v">${escHtml(s.next_action)}</div></div>`:''}
+    </div>
+    <div class="modal-foot"><button class="btn btn-ghost" style="margin-right:auto" onclick="nav('#/customers/${s.customer_id}');closeModal()">고객 상세로</button><button class="btn" onclick="closeModal()">닫기</button><button class="btn btn-primary" onclick="openRecordModal('${id}')">수정</button></div>`);
 }
 </script>
 <script>
