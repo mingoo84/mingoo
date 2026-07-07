@@ -506,6 +506,32 @@ function saveUlgPriceCfg(){
   toast('요금이 저장되어 다음 견적부터 기본값으로 사용됩니다','ok');
   recalcBuilder();
 }
+
+/* ---- 원가(매입단가) 저장소 — 판매가(ULG_CFG)와 분리, [관리 > 원가관리]에서만 입력·저장 ----
+   자유렌트는 예외: '기준가'가 이미 렌트업체 원가이고 마진(ULG.rentMargin)이 판매가에 더해지는 구조라
+   별도 원가 입력이 필요 없어 이 저장소에 포함하지 않는다. */
+const COST_KEY='gt_erp_cost_cfg_v1';
+function lodgeKey(name,roomType){ return name+'|'+roomType; }
+function defaultCostCfg(){
+  const ship={}; Object.keys(ULG.ships).forEach(k=>ship[k]=0);
+  const tour={}; Object.entries(ULG.tours).forEach(([k,v])=>{ if(!v.rent) tour[k]=0; });
+  const lodging={}; Object.entries(LODGE_ROOM_PRICE).forEach(([name,rooms])=>{ Object.keys(rooms).forEach(rt=>lodging[lodgeKey(name,rt)]=0); });
+  return { ship, tour, dokdo:0, meal:{breakfast:0,cruiseBreakfast:0,lunch:0,dinner:0}, lodging };
+}
+function loadCostCfg(){
+  const base=defaultCostCfg();
+  try{
+    const raw=JSON.parse(localStorage.getItem(COST_KEY)||'{}');
+    if(raw.ship) Object.assign(base.ship, raw.ship);
+    if(raw.tour) Object.assign(base.tour, raw.tour);
+    if(typeof raw.dokdo==='number') base.dokdo=raw.dokdo;
+    if(raw.meal) Object.assign(base.meal, raw.meal);
+    if(raw.lodging) Object.assign(base.lodging, raw.lodging);
+  }catch(e){}
+  return base;
+}
+let COST_CFG=loadCostCfg();
+function saveCostCfg(){ try{ localStorage.setItem(COST_KEY, JSON.stringify(COST_CFG)); }catch(e){} toast('원가가 저장되었습니다. 다음 자동견적부터 반영됩니다','ok'); }
 function round100(n){ return Math.round(n/100)*100; }
 // 시즌 자동: 성수기(7/15~8/20) > 주말(금·토) > 주중
 function autoSeason(iso){
@@ -721,7 +747,8 @@ const ICONS={
   search:'M21 21l-4.35-4.35M11 19a8 8 0 1 0 0-16 8 8 0 0 0 0 16z',
   plus:'M12 5v14M5 12h14', ship:'M3 14l1.5 5h15L21 14M5 14V8h14v6M12 3v5M8 21h8', bell:'M18 8a6 6 0 1 0-12 0c0 7-3 9-3 9h18s-3-2-3-9M13.7 21a2 2 0 0 1-3.4 0',
   calc:'M6 2h12a1 1 0 0 1 1 1v18a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1zM8 6h8M8 11h.01M12 11h.01M16 11h.01M8 15h.01M12 15h.01M16 15v3M8 18h4',
-  back:'M19 12H5M12 19l-7-7 7-7', box:'M21 8l-9-5-9 5 9 5 9-5zM3 8v8l9 5 9-5V8'
+  back:'M19 12H5M12 19l-7-7 7-7', box:'M21 8l-9-5-9 5 9 5 9-5zM3 8v8l9 5 9-5V8',
+  tag:'M20 13l-8 8L2 11V3h8l10 10z M7 7h.01'
 };
 function ic(name,cls){ return `<svg class="${cls||'ic'}" viewBox="0 0 24 24"><path d="${ICONS[name]||''}"/></svg>`; }
 
@@ -778,6 +805,7 @@ const NAV=[
   {id:'analytics',label:'매출분석',icon:'chart',route:'#/analytics'},
   {sec:true, tone:'violet', head:{id:'settings',label:'관리',icon:'gear',route:'#/settings'}},
   {id:'settings',label:'설정',icon:'gear',route:'#/settings'},
+  {id:'cost_mgmt',label:'원가관리',icon:'tag',route:'#/cost-mgmt'},
 ];
 
 function parseHash(){
@@ -795,6 +823,7 @@ function activeNavId(){
   if(r==='quotes'){ const sub=(seg[1]||'').split('?')[0]; return sub==='new'?'quote_new':'quotes'; }
   if(r==='call-records') return 'call_records';
   if(r==='link-consult') return 'link_consult';
+  if(r==='cost-mgmt') return 'cost_mgmt';
   if(r==='sms') return 'reservations'; /* 문자 화면은 예약/문자 메뉴에 귀속 */
   return r;
 }
@@ -828,6 +857,7 @@ function render(){
     else if(route==='consultations') renderConsultations(content);
     else if(route==='call-records') renderCallRecords(content);
     else if(route==='link-consult') renderLinkConsult(content);
+    else if(route==='cost-mgmt') renderCostMgmt(content);
     else if(route==='quotes'){ const sub=(seg[1]||'').split('?')[0]; sub==='new'?renderQuoteBuilder(content,null):(sub?renderQuoteBuilder(content,sub):renderQuotes(content)); }
     else if(route==='reservations'){ seg[1]?renderReservationDetail(content,seg[1]):renderReservations(content); }
     else if(route==='payments') renderPayments(content);
@@ -1803,28 +1833,38 @@ function ulgSeason(){ const u=_builder.ulg; return u.seasonManual||autoSeason(_b
 function ulgTierSum(){ return _builder.ulg.tiers.reduce((s,t)=>s+(+t.count||0),0); }
 function ulgCompute(){
   const u=_builder.ulg; const season=ulgSeason(); const tierSum=ulgTierSum(); const lines=[];
-  // 승선권 (등급별, 할인은 승선권에만)
+  // 승선권 (등급별, 할인은 승선권에만 — 원가는 [관리>원가관리]의 배편 원가, 등급 무관 고정)
+  const ferryCost=+COST_CFG.ship[u.ship]||0;
   u.tiers.forEach(t=>{ const cnt=+t.count||0; if(cnt<=0) return; const g=ULG.grades[t.grade];
     const per=round100(u.ticket*(1-g.rate))+(+u.fuel||0);
-    lines.push({type:'ferry', name:`왕복승선권 ${g.name}`, qty:cnt, unit:per, total:per*cnt}); });
-  // 투어
+    lines.push({type:'ferry', name:`왕복승선권 ${g.name}`, qty:cnt, unit:per, total:per*cnt, costUnit:ferryCost, costTotal:ferryCost*cnt}); });
+  // 투어 (자유렌트는 '기준가'가 이미 원가이므로 원가관리 대상 아님 — 마진만 별도)
   const tour=ULG.tours[u.tour.method];
-  if(u.tour.method==='rent'){ const base=(+u.tour.carBase||0)+ULG.rentMargin; const tot=base*u.nights*(+u.tour.cars||1);
-    lines.push({type:'vehicle', name:`자유렌트 ${ULG.rentCars[u.tour.car].name} ${u.nights}박×${u.tour.cars||1}대`, qty:1, unit:tot, total:tot});
-  } else if(tour.perPerson){ const q=Math.max(tierSum,1); lines.push({type:'tour', name:tour.name, qty:q, unit:(+u.tour.fee||0), total:(+u.tour.fee||0)*q});
-  } else { const vc=Math.max(1,+u.tour.vehCount||1); const fee=+u.tour.fee||0;
-    lines.push({type:'tour', name:tour.name+(vc>1?` ${vc}대`:''), qty:vc, unit:fee, total:fee*vc}); }
+  if(u.tour.method==='rent'){ const base=(+u.tour.carBase||0); const nCars=+u.tour.cars||1; const tot=(base+ULG.rentMargin)*u.nights*nCars; const costTot=base*u.nights*nCars;
+    lines.push({type:'vehicle', name:`자유렌트 ${ULG.rentCars[u.tour.car].name} ${u.nights}박×${nCars}대`, qty:1, unit:tot, total:tot, costUnit:costTot, costTotal:costTot});
+  } else if(tour.perPerson){ const q=Math.max(tierSum,1); const cost=+COST_CFG.tour[u.tour.method]||0;
+    lines.push({type:'tour', name:tour.name, qty:q, unit:(+u.tour.fee||0), total:(+u.tour.fee||0)*q, costUnit:cost, costTotal:cost*q});
+  } else { const vc=Math.max(1,+u.tour.vehCount||1); const fee=+u.tour.fee||0; const cost=+COST_CFG.tour[u.tour.method]||0;
+    lines.push({type:'tour', name:tour.name+(vc>1?` ${vc}대`:''), qty:vc, unit:fee, total:fee*vc, costUnit:cost, costTotal:cost*vc}); }
   // 독도
-  if(u.dokdo.on){ const q=(+u.dokdo.count>0?+u.dokdo.count:tierSum); lines.push({type:'tour', name:'독도 탐방', qty:q, unit:(+u.dokdo.fee||0), total:(+u.dokdo.fee||0)*q}); }
-  // 식대 (끼니 자동 + 크루즈 조식 1끼 치환)
+  if(u.dokdo.on){ const q=(+u.dokdo.count>0?+u.dokdo.count:tierSum); const cost=+COST_CFG.dokdo||0;
+    lines.push({type:'tour', name:'독도 탐방', qty:q, unit:(+u.dokdo.fee||0), total:(+u.dokdo.fee||0)*q, costUnit:cost, costTotal:cost*q}); }
+  // 식대 (끼니 자동 + 크루즈 조식 1끼 치환) — 원가도 같은 방식으로 산정
   const m=autoMeals(u.nights,u.ship); const bCnt=m.breakfast, lCnt=m.lunch, dCnt=+u.meal.dinner||0;
   let bTotal=(u.ship==='crz'&&u.cruiseBfast&&bCnt>0)?((+u.meal.priceCB||0)+(+u.meal.priceB||0)*(bCnt-1)):((+u.meal.priceB||0)*bCnt);
   const perMeal=bTotal+(+u.meal.priceL||0)*lCnt+(+u.meal.priceD||0)*dCnt;
-  if(perMeal>0&&tierSum>0) lines.push({type:'meal', name:`식대(조${bCnt}·중${lCnt}${dCnt?'·석'+dCnt:''})`, qty:tierSum, unit:perMeal, total:perMeal*tierSum});
-  // 숙소
-  u.lodgings.forEach(l=>{ if(l.name&&(+l.price>0)){ const rooms=+l.rooms||1; const nm=[l.name,l.roomType].filter(Boolean).join(' '); lines.push({type:'lodging', name:nm, qty:rooms, unit:+l.price, total:(+l.price)*rooms}); } });
+  const cm=COST_CFG.meal;
+  let bTotalCost=(u.ship==='crz'&&u.cruiseBfast&&bCnt>0)?((+cm.cruiseBreakfast||0)+(+cm.breakfast||0)*(bCnt-1)):((+cm.breakfast||0)*bCnt);
+  const perMealCost=bTotalCost+(+cm.lunch||0)*lCnt+(+cm.dinner||0)*dCnt;
+  if(perMeal>0&&tierSum>0) lines.push({type:'meal', name:`식대(조${bCnt}·중${lCnt}${dCnt?'·석'+dCnt:''})`, qty:tierSum, unit:perMeal, total:perMeal*tierSum, costUnit:perMealCost, costTotal:perMealCost*tierSum});
+  // 숙소 (알려진 숙소·방종류 조합이면 [관리>원가관리]의 원가 자동 매칭, 커스텀 숙소는 원가 0)
+  u.lodgings.forEach(l=>{ if(l.name&&(+l.price>0)){ const rooms=+l.rooms||1; const nm=[l.name,l.roomType].filter(Boolean).join(' ');
+    const cost=+COST_CFG.lodging[lodgeKey((l.name||'').trim(),(l.roomType||'').trim())]||0;
+    lines.push({type:'lodging', name:nm, qty:rooms, unit:+l.price, total:(+l.price)*rooms, costUnit:cost, costTotal:cost*rooms}); } });
   const total=lines.reduce((s,l)=>s+l.total,0); const deposit=tierSum*ULG.depositPerPerson;
-  return {season, tierSum, lines, total, deposit};
+  const totalCost=lines.reduce((s,l)=>s+(l.costTotal||0),0); const margin=total-totalCost;
+  const marginRate=total?(margin/total*100):0;
+  return {season, tierSum, lines, total, deposit, totalCost, margin, marginRate};
 }
 function ulgPanelHtml(b){
   const u=b.ulg; const c=ulgCompute(); const season=c.season; const auto=autoSeason(b.travel_start_date);
@@ -1914,6 +1954,8 @@ function ulgPanelHtml(b){
         <div style="font-size:12.5px;color:var(--muted);">예상 총액</div>
         <div style="font-size:20px;font-weight:800;color:var(--blue);margin-top:2px;">${money(c.total)}원</div>
         <div style="font-size:12px;color:var(--faint);margin-top:4px;">계약금 ${money(c.deposit)}원 (${c.tierSum}인×10만)</div>
+        ${c.totalCost>0?`<div style="font-size:12px;color:var(--muted);margin-top:8px;padding-top:8px;border-top:1px dashed var(--blue-soft);">예상 원가 ${money(c.totalCost)}원 · 마진 <b style="color:${c.margin>=0?'var(--success)':'var(--danger)'}">${money(c.margin)}원 (${c.marginRate.toFixed(1)}%)</b></div>`
+        :`<div style="font-size:11px;color:var(--faint);margin-top:8px;padding-top:8px;border-top:1px dashed var(--blue-soft);"><a href="#/cost-mgmt" onclick="closeSidebar()" style="color:inherit;text-decoration:underline;">원가관리</a>에 원가를 입력하면 예상 마진이 여기 표시됩니다</div>`}
       </div>
       <button class="btn btn-primary" style="width:100%;" onclick="applyUlg()">${ic('spark','ic')} 요금 자동 반영</button>
     </div>`:''}
@@ -1942,11 +1984,12 @@ function ulgLodgeAutofill(i){
 function applyUlg(){
   const c=ulgCompute(); const u=_builder.ulg;
   if(!c.tierSum){ toast('인원 구성을 1명 이상 입력하세요','err'); return; }
-  _builder.items=c.lines.map(l=>({id:uid(), item_type:l.type, item_name:l.name, quantity:l.qty, sale_price:l.unit, cost_price:l.unit}));
+  _builder.items=c.lines.map(l=>({id:uid(), item_type:l.type, item_name:l.name, quantity:l.qty, sale_price:l.unit, cost_price:l.costUnit||0}));
   let ad=0, ch=0; u.tiers.forEach(t=>{ if(t.grade==='child') ch+=(+t.count||0); else ad+=(+t.count||0); });
   _builder.adults=ad; _builder.children=ch; _builder.infants=0; ulgSyncEnd();
   recalcBuilder();
-  toast('요금이 견적 항목에 반영됐습니다. 원가를 입력하면 이익·마진이 계산됩니다','ok');
+  const noCost=c.totalCost===0;
+  toast(noCost?'요금이 반영됐습니다. [관리>원가관리]에서 원가를 입력하면 마진이 자동 계산됩니다':`요금과 원가가 반영됐습니다 (예상 마진율 ${c.marginRate.toFixed(1)}%)`,'ok');
 }
 function itemRowHtml(it,idx){
   return `<div class="item-row" data-idx="${idx}">
@@ -2610,6 +2653,84 @@ function exportCsv(){
 /* ============================================================
    설정
    ============================================================ */
+/* ============================================================
+   원가관리 — 배편/투어/독도/식대/숙소의 매입단가(원가). 자동견적 마진 계산에만 쓰이고
+   고객 화면(견적서 미리보기 등)에는 절대 노출되지 않는다. 판매가(ULG_CFG)와 분리 저장.
+   ============================================================ */
+let _costCfgSavedJSON=JSON.stringify(COST_CFG);
+function costIsDirty(){ return JSON.stringify(COST_CFG)!==_costCfgSavedJSON; }
+function costSet(path,val){
+  const n=parseNum(val);
+  if(path[0]==='ship') COST_CFG.ship[path[1]]=n;
+  else if(path[0]==='tour') COST_CFG.tour[path[1]]=n;
+  else if(path[0]==='dokdo') COST_CFG.dokdo=n;
+  else if(path[0]==='meal') COST_CFG.meal[path[1]]=n;
+  else if(path[0]==='lodging') COST_CFG.lodging[path[1]]=n;
+  renderCostMgmt(document.getElementById('content'));
+}
+function saveCostCfgClick(){ saveCostCfg(); _costCfgSavedJSON=JSON.stringify(COST_CFG); renderCostMgmt(document.getElementById('content')); }
+function renderCostMgmt(el){
+  if(!can('analytics')){ el.innerHTML=`<div class="page-head"><div><h1>원가관리</h1></div></div><div class="card card-pad"><div class="empty">${ic('tag')}<div>원가관리는 관리자·매니저·정산담당만 접근할 수 있습니다.</div></div></div>`; return; }
+  const dirty=costIsDirty();
+  const shipRows=Object.entries(ULG.ships).map(([k,v])=>`<div class="form-row" style="margin-bottom:8px;">
+    <div class="field mb0"><label class="faint" style="font-weight:400;">${v.name} <span class="faint">(판매 ${money(ULG_CFG.ship[k]||v.ticket)}원)</span></label>
+      <input type="text" inputmode="numeric" value="${money(COST_CFG.ship[k])}" onchange="costSet(['ship','${k}'],this.value)"></div>
+  </div>`).join('');
+  const tourRows=Object.entries(ULG.tours).filter(([k,v])=>!v.rent).map(([k,v])=>`<div class="form-row" style="margin-bottom:8px;">
+    <div class="field mb0"><label class="faint" style="font-weight:400;">${v.name} <span class="faint">(${v.perPerson?'1인당':'차량1대'}, 판매 ${money(ULG_CFG.tour[k]||v.price)}원)</span></label>
+      <input type="text" inputmode="numeric" value="${money(COST_CFG.tour[k])}" onchange="costSet(['tour','${k}'],this.value)"></div>
+  </div>`).join('');
+  const mealDefs=[['breakfast','조식'],['cruiseBreakfast','크루즈조식'],['lunch','중식'],['dinner','석식']];
+  const mealRows=mealDefs.map(([k,label])=>`<div class="field mb0"><label class="faint" style="font-weight:400;">${label} <span class="faint">(판매 ${money(ULG_CFG.meal[k])}원)</span></label>
+    <input type="text" inputmode="numeric" value="${money(COST_CFG.meal[k])}" onchange="costSet(['meal','${k}'],this.value)"></div>`).join('');
+  const lodgeSections=Object.entries(LODGE_ROOM_PRICE).map(([name,rooms])=>`
+    <div style="font-weight:700;font-size:13px;margin:14px 0 6px;">${name}</div>
+    <div class="lodge-row" style="grid-template-columns:1.4fr 1fr 1fr;font-size:11px;color:var(--muted);font-weight:700;border-bottom:2px solid var(--border);">
+      <div>방종류</div><div>판매가(주중/주말/성수기)</div><div>원가</div>
+    </div>
+    ${Object.entries(rooms).map(([rt,arr])=>{ const key=lodgeKey(name,rt); return `<div class="lodge-row" style="grid-template-columns:1.4fr 1fr 1fr;">
+      <div style="font-size:13px;">${rt}</div>
+      <div class="faint" style="font-size:12px;">${money(arr[0])}/${money(arr[1])}/${money(arr[2])}</div>
+      <input type="text" inputmode="numeric" value="${money(COST_CFG.lodging[key])}" onchange="costSet(['lodging','${key}'],this.value)">
+    </div>`;}).join('')}
+  `).join('');
+  el.innerHTML=`
+  <div class="page-head">
+    <div><h1>원가관리</h1><div class="sub">배편·투어·독도·식대·숙소 매입단가 — 자동견적 마진 계산에만 사용, 고객에게 노출되지 않습니다</div></div>
+    <div class="actions">${dirty?'<span class="badge b-orange" style="margin-right:8px;">미저장</span>':''}<button class="btn btn-primary" onclick="saveCostCfgClick()">${ic('doc','ic')} 원가 저장</button></div>
+  </div>
+  <div class="card card-pad" style="margin-bottom:16px;font-size:12.5px;line-height:1.7;color:var(--slate);">
+    여기서 저장한 원가는 <b>자동견적 → [요금 자동 반영]</b> 시 견적 항목의 원가단가로 자동 채워져 예상 마진이 계산됩니다.
+    자유렌트는 '요금 자동계산'의 차량 기준가 자체가 매입원가라 이 화면에 따로 없습니다.
+  </div>
+  <div class="row" style="align-items:flex-start;flex-wrap:wrap;gap:16px;">
+    <div class="card card-pad" style="flex:1;min-width:280px;">
+      <h3 style="font-size:14px;margin-bottom:10px;">배편 원가 (1인)</h3>
+      ${shipRows}
+    </div>
+    <div class="card card-pad" style="flex:1;min-width:280px;">
+      <h3 style="font-size:14px;margin-bottom:10px;">투어 원가</h3>
+      ${tourRows}
+    </div>
+  </div>
+  <div class="row" style="align-items:flex-start;flex-wrap:wrap;gap:16px;margin-top:16px;">
+    <div class="card card-pad" style="flex:1;min-width:280px;">
+      <h3 style="font-size:14px;margin-bottom:10px;">독도 탐방 원가 (1인)</h3>
+      <div class="field mb0"><label class="faint" style="font-weight:400;">독도 탐방 <span class="faint">(판매 ${money(ULG_CFG.dokdo)}원)</span></label>
+        <input type="text" inputmode="numeric" value="${money(COST_CFG.dokdo)}" onchange="costSet(['dokdo'],this.value)"></div>
+    </div>
+    <div class="card card-pad" style="flex:1;min-width:280px;">
+      <h3 style="font-size:14px;margin-bottom:10px;">식대 원가 (1인)</h3>
+      <div class="form-row-3">${mealRows}</div>
+    </div>
+  </div>
+  <div class="card card-pad mt16">
+    <h3 style="font-size:14px;margin-bottom:6px;">숙소 원가</h3>
+    <div class="faint" style="font-size:12px;margin-bottom:6px;">등록된 숙소·방종류 조합만 원가를 저장할 수 있습니다. 목록에 없는 커스텀 숙소는 견적 항목에서 직접 원가를 입력하세요.</div>
+    ${lodgeSections}
+  </div>`;
+}
+
 let _setTab='users';
 function renderSettings(el){
   const admin=session().role==='admin';
