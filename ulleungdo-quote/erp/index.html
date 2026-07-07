@@ -56,32 +56,7 @@ svg.ic{width:16px;height:16px;flex-shrink:0;fill:none;stroke:currentColor;stroke
   width:220px;flex-shrink:0;background:var(--surface);border-right:1px solid var(--border);
   display:flex;flex-direction:column;position:sticky;top:0;height:100vh;
 }
-.sb-logo{padding:17px 18px 15px;display:flex;align-items:center;gap:12px;border-bottom:1px solid var(--border);}
-.gt-word{font-family:Georgia,'Times New Roman',serif;font-style:italic;font-weight:700;letter-spacing:-.5px;color:#2647D9;line-height:1;}
-/* 좌측 상단 로고 — 글래스모피즘 3D 타일 */
-.logo3d{
-  width:52px;height:52px;flex-shrink:0;position:relative;
-  border-radius:16px;
-  transform:perspective(340px) rotateX(17deg) rotateY(-19deg);
-  transform-style:preserve-3d;
-  background:
-    linear-gradient(135deg,rgba(255,255,255,.92),rgba(255,255,255,.32) 46%,rgba(214,228,255,.6)),
-    linear-gradient(160deg,#F0F5FF,#D6E4FF);
-  border:1.5px solid rgba(255,255,255,.88);
-  box-shadow:
-    0 16px 24px -9px rgba(37,71,217,.5),
-    0 5px 9px -4px rgba(37,71,217,.38),
-    inset 0 1.5px 1px rgba(255,255,255,.95),
-    inset 0 -9px 16px rgba(37,71,217,.13);
-  display:flex;align-items:center;justify-content:center;
-  transition:transform .3s cubic-bezier(.2,.7,.3,1);
-}
-.logo3d::before{
-  content:"";position:absolute;inset:0;border-radius:16px;pointer-events:none;
-  background:linear-gradient(128deg,rgba(255,255,255,.75) 0%,rgba(255,255,255,0) 42%);
-}
-.logo3d svg{width:31px;height:31px;position:relative;transform:translateZ(16px);filter:drop-shadow(0 3px 4px rgba(37,71,217,.38));}
-.logo3d:hover{transform:perspective(340px) rotateX(9deg) rotateY(-9deg) scale(1.05);}
+.sb-logo{padding:16px 18px 13px;display:flex;align-items:center;gap:9px;border-bottom:1px solid var(--border);}
 .sb-nav{flex:1;overflow-y:auto;padding:12px 12px 16px;background:#F2F4F8;}
 .sb-group{font-size:11px;font-weight:700;color:var(--faint);padding:14px 8px 6px;letter-spacing:.4px;}
 .sb-nav .sb-group:first-child{padding-top:2px;}
@@ -593,20 +568,6 @@ const GT_LOGO_B64='iVBORw0KGgoAAAANSUhEUgAAAGcAAAA7CAYAAABmDZR1AAAAAXNSR0IArs4c6
 function gtLogo(h){
   return `<img src="data:image/png;base64,${GT_LOGO_B64}" style="height:${h}px;width:auto;flex-shrink:0;" alt="good-tour">`;
 }
-/* 3D 글래스 타일 로고 (사이드바 좌측 상단 전용) — good-tour 말풍선 g 마크 */
-function logo3d(){
-  return `<div class="logo3d" role="img" aria-label="good-tour">
-    <svg viewBox="0 0 96 96" xmlns="http://www.w3.org/2000/svg">
-      <defs><linearGradient id="l3g" x1="0" y1="0" x2="1" y2="1">
-        <stop offset="0" stop-color="#5AB0EA"/><stop offset="1" stop-color="#2647D9"/></linearGradient></defs>
-      <g fill="url(#l3g)">
-        <circle cx="52" cy="42" r="34"/>
-        <path d="M31 69 C27 84 18 92 8 95 C25 93 40 84 47 69 Z"/>
-      </g>
-      <text x="49" y="60" text-anchor="middle" font-family="Georgia,'Times New Roman',serif" font-style="italic" font-weight="700" font-size="52" fill="#fff">g</text>
-    </svg>
-  </div>`;
-}
 
 let _toastTimer;
 function toast(msg,type){ const r=document.getElementById('toast-root'); const t=document.createElement('div'); t.className='toast '+(type||''); t.innerHTML=msg; r.appendChild(t); setTimeout(()=>{ t.style.opacity='0'; t.style.transition='opacity .3s'; setTimeout(()=>t.remove(),300); },2600); }
@@ -726,7 +687,7 @@ function renderShell(app){
   <div class="scrim" id="scrim" onclick="closeSidebar()"></div>
   <div class="app">
     <aside class="sidebar" id="sidebar">
-      <div class="sb-logo">${logo3d()}<div><div class="gt-word" style="font-size:17px;">good-tour</div><div style="font-weight:700;font-size:9.5px;color:var(--faint);letter-spacing:.6px;margin-top:4px;">굿투어 ERP · ULLEUNGDO</div></div></div>
+      <div class="sb-logo" style="flex-direction:column;align-items:flex-start;gap:7px;">${gtLogo(40)}<small style="font-weight:700;font-size:10px;color:var(--faint);letter-spacing:.8px;">굿투어 ERP · ULLEUNGDO</small></div>
       <nav class="sb-nav">${navHtml}</nav>
       <div class="sb-user">
         <div class="av">${u.name.slice(0,1)}</div>
