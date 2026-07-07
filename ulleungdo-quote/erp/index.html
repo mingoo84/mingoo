@@ -465,6 +465,47 @@ const LODGE_ROOM_PRICE={
     '별관 디럭스스위트':[240000,285000,325000],'방갈로':[215000,245000,280000],
   },
 };
+
+/* ---- 변동 요금 저장소 (localStorage, "요금 저장" 클릭 시에만 갱신 — 이후 견적부터 기본값) ---- */
+const ULG_PRICE_KEY='gt_erp_ulg_price_v1';
+function ulgDefaultPriceCfg(){
+  const ship={}; Object.entries(ULG.ships).forEach(([k,v])=>ship[k]=v.ticket);
+  const tour={}; Object.entries(ULG.tours).forEach(([k,v])=>{ if(!v.rent) tour[k]=v.price; });
+  const rent={}; Object.entries(ULG.rentCars).forEach(([k,v])=>rent[k]={off:v.off, peak:v.peak});
+  return { ship, tour, rent, dokdo:ULG.dokdoFee, fuel:0, meal:{...ULG.mealPrice} };
+}
+function loadUlgPriceCfg(){
+  const base=ulgDefaultPriceCfg();
+  try{
+    const raw=JSON.parse(localStorage.getItem(ULG_PRICE_KEY)||'{}');
+    if(raw.ship) Object.assign(base.ship, raw.ship);
+    if(raw.tour) Object.assign(base.tour, raw.tour);
+    if(raw.rent) Object.keys(base.rent).forEach(k=>{ if(raw.rent[k]) Object.assign(base.rent[k], raw.rent[k]); });
+    if(typeof raw.dokdo==='number') base.dokdo=raw.dokdo;
+    if(typeof raw.fuel==='number') base.fuel=raw.fuel;
+    if(raw.meal) Object.assign(base.meal, raw.meal);
+  }catch(e){}
+  return base;
+}
+let ULG_CFG=loadUlgPriceCfg();
+let _ulgCfgSavedJSON=JSON.stringify(ULG_CFG);
+// 현재 화면(_builder.ulg)의 편집값을 저장소 형태로 환산 — 저장 전엔 비교용, 저장 시 그대로 커밋
+function ulgPendingCfg(){
+  const u=_builder&&_builder.ulg; if(!u) return ULG_CFG;
+  const seasonKey=ulgSeason()==='peak'?'peak':'off';
+  const rent={...ULG_CFG.rent}; rent[u.tour.car]={...ULG_CFG.rent[u.tour.car], [seasonKey]:u.tour.carBase};
+  const tour={...ULG_CFG.tour}; if(u.tour.method!=='rent') tour[u.tour.method]=u.tour.fee;
+  return { ship:{...ULG_CFG.ship, [u.ship]:u.ticket}, tour, rent, dokdo:u.dokdo.fee, fuel:u.fuel,
+    meal:{ breakfast:u.meal.priceB, cruiseBreakfast:u.meal.priceCB, lunch:u.meal.priceL, dinner:u.meal.priceD } };
+}
+function ulgIsDirty(){ return JSON.stringify(ulgPendingCfg())!==_ulgCfgSavedJSON; }
+function saveUlgPriceCfg(){
+  ULG_CFG=ulgPendingCfg();
+  try{ localStorage.setItem(ULG_PRICE_KEY, JSON.stringify(ULG_CFG)); }catch(e){}
+  _ulgCfgSavedJSON=JSON.stringify(ULG_CFG);
+  toast('요금이 저장되어 다음 견적부터 기본값으로 사용됩니다','ok');
+  recalcBuilder();
+}
 function round100(n){ return Math.round(n/100)*100; }
 // 시즌 자동: 성수기(7/15~8/20) > 주말(금·토) > 주중
 function autoSeason(iso){
@@ -1625,10 +1666,11 @@ function drawBuilder(el){
 /* ---- 울릉도 자동견적 패널 ---- */
 let _ulgOpen=true;
 function defaultUlg(){
-  return { ship:'crz', ticket:190000, fuel:0, nights:2, seasonManual:null, cruiseBfast:true,
-    tour:{method:'bus', fee:38000, car:'ray', cars:1, carBase:50000},
-    dokdo:{on:false, fee:55000, count:0},
-    meal:{ dinner:0, priceB:8000, priceCB:12000, priceL:10000, priceD:12000 },
+  const cfg=ULG_CFG;
+  return { ship:'crz', ticket:cfg.ship.crz, fuel:cfg.fuel, nights:2, seasonManual:null, cruiseBfast:true,
+    tour:{method:'bus', fee:cfg.tour.bus, car:'ray', cars:1, carBase:cfg.rent.ray.off, vehCount:1},
+    dokdo:{on:false, fee:cfg.dokdo, count:0},
+    meal:{ dinner:0, priceB:cfg.meal.breakfast, priceCB:cfg.meal.cruiseBreakfast, priceL:cfg.meal.lunch, priceD:cfg.meal.dinner },
     lodgings:[], tiers:[{grade:'adult', count:2}] };
 }
 function ulgSeason(){ const u=_builder.ulg; return u.seasonManual||autoSeason(_builder.travel_start_date); }
@@ -1644,7 +1686,8 @@ function ulgCompute(){
   if(u.tour.method==='rent'){ const base=(+u.tour.carBase||0)+ULG.rentMargin; const tot=base*u.nights*(+u.tour.cars||1);
     lines.push({type:'vehicle', name:`자유렌트 ${ULG.rentCars[u.tour.car].name} ${u.nights}박×${u.tour.cars||1}대`, qty:1, unit:tot, total:tot});
   } else if(tour.perPerson){ const q=Math.max(tierSum,1); lines.push({type:'tour', name:tour.name, qty:q, unit:(+u.tour.fee||0), total:(+u.tour.fee||0)*q});
-  } else { lines.push({type:'tour', name:tour.name, qty:1, unit:(+u.tour.fee||0), total:(+u.tour.fee||0)}); }
+  } else { const vc=Math.max(1,+u.tour.vehCount||1); const fee=+u.tour.fee||0;
+    lines.push({type:'tour', name:tour.name+(vc>1?` ${vc}대`:''), qty:vc, unit:fee, total:fee*vc}); }
   // 독도
   if(u.dokdo.on){ const q=(+u.dokdo.count>0?+u.dokdo.count:tierSum); lines.push({type:'tour', name:'독도 탐방', qty:q, unit:(+u.dokdo.fee||0), total:(+u.dokdo.fee||0)*q}); }
   // 식대 (끼니 자동 + 크루즈 조식 1끼 치환)
@@ -1664,19 +1707,24 @@ function ulgPanelHtml(b){
   const carOpts=Object.entries(ULG.rentCars).map(([k,v])=>`<option value="${k}" ${u.tour.car===k?'selected':''}>${v.name}</option>`).join('');
   const gradeOpts=g=>Object.entries(ULG.grades).map(([k,v])=>`<option value="${k}" ${g===k?'selected':''}>${v.name} (${Math.round(v.rate*100)}%)</option>`).join('');
   const m=autoMeals(u.nights,u.ship);
+  const dirty=ulgIsDirty();
   return `<div class="card" style="margin-bottom:16px;">
-    <div class="card-head" style="cursor:pointer;" onclick="_ulgOpen=!_ulgOpen;recalcBuilder()">
-      <h3 style="font-size:15px;">🧮 울릉도 요금 자동계산 <span class="faint" style="font-weight:400;font-size:12px;">선박·시즌·투어·식대·등급 반영</span></h3>
-      <span class="muted" style="font-size:12.5px;">${_ulgOpen?'접기 ▲':'펼치기 ▼'}</span>
+    <div class="card-head">
+      <h3 style="font-size:15px;cursor:pointer;" onclick="_ulgOpen=!_ulgOpen;recalcBuilder()">🧮 울릉도 요금 자동계산 <span class="faint" style="font-weight:400;font-size:12px;">선박·시즌·투어·식대·등급 반영</span></h3>
+      <div style="display:flex;align-items:center;gap:8px;">
+        ${dirty?'<span class="badge b-orange">미저장</span>':''}
+        ${_ulgOpen?`<button class="btn btn-sm" onclick="saveUlgPriceCfg()" title="승선권·유류·투어·차종·독도·식대 단가를 다음 견적부터 기본값으로 저장">${ic('doc','ic')} 요금 저장</button>`:''}
+        <span class="muted" style="font-size:12.5px;cursor:pointer;" onclick="_ulgOpen=!_ulgOpen;recalcBuilder()">${_ulgOpen?'접기 ▲':'펼치기 ▼'}</span>
+      </div>
     </div>
     ${_ulgOpen?`<div class="card-pad">
       <div class="form-row">
         <div class="field"><label>가는편 선박</label><select onchange="ulgShip(this.value)">${shipOpts}</select></div>
-        <div class="field"><label>왕복승선권 (대인 1인)</label><input type="number" value="${u.ticket}" onchange="_builder.ulg.ticket=+this.value;recalcBuilder()"></div>
+        <div class="field"><label>왕복승선권 (대인 1인)</label><input type="text" inputmode="numeric" value="${money(u.ticket)}" onchange="_builder.ulg.ticket=parseNum(this.value);recalcBuilder()"></div>
       </div>
       <div class="form-row">
         <div class="field"><label>일정</label><select onchange="ulgNights(+this.value)"><option value="1" ${u.nights===1?'selected':''}>1박 2일</option><option value="2" ${u.nights===2?'selected':''}>2박 3일</option></select></div>
-        <div class="field"><label>유류할증료 (1인, 할인없음)</label><input type="number" value="${u.fuel}" onchange="_builder.ulg.fuel=+this.value;recalcBuilder()"></div>
+        <div class="field"><label>유류할증료 (1인, 할인없음)</label><input type="text" inputmode="numeric" value="${money(u.fuel)}" onchange="_builder.ulg.fuel=parseNum(this.value);recalcBuilder()"></div>
       </div>
       <div class="field"><label>요금 시즌 <span class="faint">(출발일 자동: ${SEASONS[auto]})</span></label>
         <div class="pill-toggle">${Object.entries(SEASONS).map(([k,v])=>`<button type="button" class="${u.seasonManual===k?'active':''}" onclick="ulgSeason2('${k}')">${v}</button>`).join('')}<button type="button" class="${u.seasonManual==null?'active':''}" onclick="ulgSeason2(null)">자동</button></div></div>
@@ -1684,23 +1732,27 @@ function ulgPanelHtml(b){
       <div class="divider"></div>
       <div class="form-row">
         <div class="field"><label>투어 방법</label><select onchange="ulgTour(this.value)">${tourOpts}</select></div>
-        ${u.tour.method==='rent'?`<div class="field"><label>차종</label><select onchange="ulgCar(this.value)">${carOpts}</select></div>`:`<div class="field"><label>투어 요금 ${ULG.tours[u.tour.method].perPerson?'(1인당)':'(팀 총액)'}</label><input type="number" value="${u.tour.fee}" onchange="_builder.ulg.tour.fee=+this.value;recalcBuilder()"></div>`}
+        ${u.tour.method==='rent'?`<div class="field"><label>차종</label><select onchange="ulgCar(this.value)">${carOpts}</select></div>`:`<div class="field"><label>투어 요금 ${ULG.tours[u.tour.method].perPerson?'(1인당)':'(차량 1대 총액)'}</label><input type="text" inputmode="numeric" value="${money(u.tour.fee)}" onchange="_builder.ulg.tour.fee=parseNum(this.value);recalcBuilder()"></div>`}
       </div>
       ${u.tour.method==='rent'?`<div class="form-row">
-        <div class="field"><label>차량 기준가 (1박·${SEASONS[season]})</label><input type="number" value="${u.tour.carBase}" onchange="_builder.ulg.tour.carBase=+this.value;recalcBuilder()"></div>
+        <div class="field"><label>차량 기준가 (1박·${SEASONS[season]})</label><input type="text" inputmode="numeric" value="${money(u.tour.carBase)}" onchange="_builder.ulg.tour.carBase=parseNum(this.value);recalcBuilder()"></div>
         <div class="field"><label>차량 대수</label><input type="number" min="1" value="${u.tour.cars}" onchange="_builder.ulg.tour.cars=+this.value;recalcBuilder()"></div>
-      </div><div class="faint" style="font-size:11.5px;margin:-6px 0 8px;">자유렌트 = (기준가 ${money(u.tour.carBase)} + 마진 ${money(ULG.rentMargin)}) × ${u.nights}박 × ${u.tour.cars||1}대 = ${money(((+u.tour.carBase||0)+ULG.rentMargin)*u.nights*(u.tour.cars||1))}원</div>`:''}
+      </div><div class="faint" style="font-size:11.5px;margin:-6px 0 8px;">자유렌트 = (기준가 ${money(u.tour.carBase)} + 마진 ${money(ULG.rentMargin)}) × ${u.nights}박 × ${u.tour.cars||1}대 = ${money(((+u.tour.carBase||0)+ULG.rentMargin)*u.nights*(u.tour.cars||1))}원</div>`
+      :`<div class="form-row">
+        <div class="field"><label>차량 대수 <span class="faint">(예: 40명→25인승 2대)</span></label><input type="number" min="1" value="${u.tour.vehCount||1}" onchange="_builder.ulg.tour.vehCount=+this.value;recalcBuilder()"></div>
+        <div class="field"><label class="faint" style="font-weight:400;">투어비 합계</label><div style="height:38px;display:flex;align-items:center;font-weight:700;">${money((+u.tour.fee||0)*Math.max(1,+u.tour.vehCount||1))}원${(+u.tour.vehCount||1)>1?` <span class="faint" style="font-weight:400;margin-left:6px;">(${money(u.tour.fee)}×${u.tour.vehCount}대)</span>`:''}</div></div>
+      </div>`}
       <div class="field mb0"><label style="display:flex;align-items:center;gap:8px;cursor:pointer;"><input type="checkbox" ${u.dokdo.on?'checked':''} onchange="_builder.ulg.dokdo.on=this.checked;recalcBuilder()" style="width:auto;"> 독도 탐방 포함</label></div>
       ${u.dokdo.on?`<div class="form-row" style="margin-top:10px;">
-        <div class="field"><label>독도 1인 추가요금</label><input type="number" value="${u.dokdo.fee}" onchange="_builder.ulg.dokdo.fee=+this.value;recalcBuilder()"></div>
+        <div class="field"><label>독도 1인 추가요금</label><input type="text" inputmode="numeric" value="${money(u.dokdo.fee)}" onchange="_builder.ulg.dokdo.fee=parseNum(this.value);recalcBuilder()"></div>
         <div class="field"><label>탐방 인원 <span class="faint">(0=전원 ${c.tierSum})</span></label><input type="number" min="0" value="${u.dokdo.count}" onchange="_builder.ulg.dokdo.count=+this.value;recalcBuilder()"></div>
       </div>`:''}
       <div class="divider"></div>
       <div style="font-size:13px;font-weight:700;margin-bottom:8px;">식대 (1인 기준) <span class="faint" style="font-weight:400;">끼니 자동: 조${m.breakfast}·중${m.lunch}${(+u.meal.dinner)?'·석'+u.meal.dinner:''}</span></div>
       <div class="form-row-3">
-        <div class="field"><label>조식 단가</label><input type="number" value="${u.meal.priceB}" onchange="_builder.ulg.meal.priceB=+this.value;recalcBuilder()"></div>
-        <div class="field"><label>중식 단가</label><input type="number" value="${u.meal.priceL}" onchange="_builder.ulg.meal.priceL=+this.value;recalcBuilder()"></div>
-        <div class="field"><label>석식 단가</label><input type="number" value="${u.meal.priceD}" onchange="_builder.ulg.meal.priceD=+this.value;recalcBuilder()"></div>
+        <div class="field"><label>조식 단가</label><input type="text" inputmode="numeric" value="${money(u.meal.priceB)}" onchange="_builder.ulg.meal.priceB=parseNum(this.value);recalcBuilder()"></div>
+        <div class="field"><label>중식 단가</label><input type="text" inputmode="numeric" value="${money(u.meal.priceL)}" onchange="_builder.ulg.meal.priceL=parseNum(this.value);recalcBuilder()"></div>
+        <div class="field"><label>석식 단가</label><input type="text" inputmode="numeric" value="${money(u.meal.priceD)}" onchange="_builder.ulg.meal.priceD=parseNum(this.value);recalcBuilder()"></div>
       </div>
       <div class="form-row">
         <div class="field"><label>석식 수량 (자유식)</label><input type="number" min="0" value="${u.meal.dinner}" onchange="_builder.ulg.meal.dinner=+this.value;recalcBuilder()"></div>
@@ -1727,7 +1779,7 @@ function ulgPanelHtml(b){
         <datalist id="dl-lname-${i}">${nameList.map(n=>`<option value="${n}">`).join('')}</datalist>
         <input placeholder="방종류 (입력·선택)" list="dl-lroom-${i}" value="${(l.roomType||'').replace(/"/g,'&quot;')}" onchange="ulgLodgeRoom(${i},this.value)" autocomplete="off">
         <datalist id="dl-lroom-${i}">${rtList.map(rt=>`<option value="${rt}">`).join('')}</datalist>
-        <input type="number" placeholder="객실단가" value="${l.price||''}" onchange="_builder.ulg.lodgings[${i}].price=+this.value;recalcBuilder()" title="${known?'현재 시즌 자동단가: '+money(known[SEASON_IDX[season]])+'원 (직접 수정 가능)':'수동 입력'}">
+        <input type="text" inputmode="numeric" placeholder="객실단가" value="${l.price?money(l.price):''}" onchange="_builder.ulg.lodgings[${i}].price=parseNum(this.value);recalcBuilder()" title="${known?'현재 시즌 자동단가: '+money(known[SEASON_IDX[season]])+'원 (직접 수정 가능)':'수동 입력'}">
         <input type="number" min="1" value="${l.rooms||1}" onchange="_builder.ulg.lodgings[${i}].rooms=+this.value;recalcBuilder()">
         <button class="del" onclick="ulgDelLodging(${i})">×</button>
       </div>${known?`<div class="faint" style="font-size:11px;margin:-4px 0 8px;">✓ ${l.name} · ${l.roomType} — ${SEASONS[season]} 단가 자동 반영됨 (직접 수정 가능)</div>`:''}`;}).join('')||'<div class="faint" style="font-size:12px;margin:6px 0 8px;">+ 숙소로 행을 추가하세요. 등록된 숙소·방종류를 선택하면 현재 시즌 단가가 자동으로 채워집니다.</div>'}
@@ -1739,12 +1791,12 @@ function ulgPanelHtml(b){
     </div>`:''}
   </div>`;
 }
-function ulgShip(v){ const u=_builder.ulg; u.ship=v; u.ticket=ULG.ships[v].ticket; recalcBuilder(); }
+function ulgShip(v){ const u=_builder.ulg; u.ship=v; u.ticket=ULG_CFG.ship[v]??ULG.ships[v].ticket; recalcBuilder(); }
 function ulgNights(n){ _builder.ulg.nights=n; ulgSyncEnd(); recalcBuilder(); }
 function ulgSeason2(v){ _builder.ulg.seasonManual=v; if(_builder.ulg.tour.method==='rent') ulgSyncCarBase(); recalcBuilder(); }
-function ulgTour(v){ const u=_builder.ulg; u.tour.method=v; if(v!=='rent'&&ULG.tours[v].price!=null) u.tour.fee=ULG.tours[v].price; if(v==='rent') ulgSyncCarBase(); recalcBuilder(); }
+function ulgTour(v){ const u=_builder.ulg; u.tour.method=v; if(v!=='rent') u.tour.fee=ULG_CFG.tour[v]??(ULG.tours[v].price||0); if(v==='rent') ulgSyncCarBase(); recalcBuilder(); }
 function ulgCar(v){ _builder.ulg.tour.car=v; ulgSyncCarBase(); recalcBuilder(); }
-function ulgSyncCarBase(){ const u=_builder.ulg; u.tour.carBase=ULG.rentCars[u.tour.car][ulgSeason()==='peak'?'peak':'off']; }
+function ulgSyncCarBase(){ const u=_builder.ulg; const r=ULG_CFG.rent[u.tour.car]||ULG.rentCars[u.tour.car]; u.tour.carBase=r[ulgSeason()==='peak'?'peak':'off']; }
 function ulgSyncEnd(){ const b=_builder; if(b.travel_start_date) b.travel_end_date=addDays(b.travel_start_date, b.ulg.nights+(b.ulg.ship==='crz'?1:0)); }
 function ulgAddTier(){ _builder.ulg.tiers.push({grade:'adult',count:1}); recalcBuilder(); }
 function ulgDelTier(i){ _builder.ulg.tiers.splice(i,1); recalcBuilder(); }
@@ -1773,8 +1825,8 @@ function itemRowHtml(it,idx){
     <select onchange="_builder.items[${idx}].item_type=this.value">${Object.entries(ITEM_TYPES).map(([k,v])=>`<option value="${k}" ${it.item_type===k?'selected':''}>${v}</option>`).join('')}</select>
     <input value="${(it.item_name||'').replace(/"/g,'&quot;')}" placeholder="항목명" onchange="_builder.items[${idx}].item_name=this.value">
     <input type="number" class="input-money" value="${it.quantity||1}" onchange="_builder.items[${idx}].quantity=+this.value;recalcBuilder()">
-    <input type="number" class="input-money" value="${it.sale_price||0}" onchange="_builder.items[${idx}].sale_price=+this.value;recalcBuilder()">
-    <input type="number" class="input-money" value="${it.cost_price||0}" onchange="_builder.items[${idx}].cost_price=+this.value;recalcBuilder()">
+    <input type="text" inputmode="numeric" class="input-money" value="${money(it.sale_price||0)}" onchange="_builder.items[${idx}].sale_price=parseNum(this.value);recalcBuilder()">
+    <input type="text" inputmode="numeric" class="input-money" value="${money(it.cost_price||0)}" onchange="_builder.items[${idx}].cost_price=parseNum(this.value);recalcBuilder()">
     <button class="del" onclick="delItem(${idx})">×</button>
   </div>`;
 }
