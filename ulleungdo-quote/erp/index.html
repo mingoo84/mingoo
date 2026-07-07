@@ -1299,13 +1299,13 @@ function callGuideCard(){
       <span class="muted" style="font-size:12.5px;">${_guideOpen?'접기 ▲':'펼치기 ▼'}</span>
     </div>
     ${_guideOpen?`<div class="card-pad" style="padding-top:4px;font-size:13.5px;line-height:1.75;color:var(--slate);">
-      <div class="guide-step"><b>①  녹취파일 확보</b><br>굿투어 상담전화는 통화가 자동 녹음됩니다. 통화 종료 후 <b>통화 녹음함</b>에서 해당 파일을 내보내기(공유)하세요. (m4a·mp3·wav 등)</div>
-      <div class="guide-step"><b>②  텍스트 변환 + 요약</b><br>녹취파일을 음성인식 도구에 올리면 전체 텍스트와 핵심 요약이 자동 생성됩니다.<br>
-        · <b>네이버 클로바노트</b> — 무료, 한국어 특화, 자동 요약 <span class="chip" style="vertical-align:1px;">권장</span><br>
-        · 다글로(Daglo) · VITO(리턴제로) 등도 사용 가능</div>
-      <div class="guide-step"><b>③  ERP에 기록</b><br>오른쪽 위 <b>[녹취 상담 등록]</b> → 고객·통화일시 선택 → 파일 첨부 → 변환한 전체 텍스트를 <b>스크립트</b>에, 요약을 <b>통화 요약</b>에 붙여넣기.<br><b>[스크립트 → 요약 초안]</b> 버튼으로 핵심 문장을 자동 추출해 초안을 만들 수 있습니다.</div>
+      <div style="background:var(--surface-soft);border:1px solid var(--border);border-radius:9px;padding:8px 11px;margin-bottom:10px;font-size:12.5px;color:var(--muted);">📱 <b>갤럭시(안드로이드)</b> + <b>다글로(Daglo)</b> 기준 · 통화녹음이 자동으로 텍스트로 변환됩니다.</div>
+      <div class="guide-step"><b>①  통화 자동녹음 켜기</b> <span class="chip" style="vertical-align:1px;">무료·1회만</span><br>전화 앱 → ⋮ → <b>설정 → 통화 녹음 → 통화 자동 녹음 ON</b>. 이후 모든 상담 통화가 폰에 자동 저장됩니다.</div>
+      <div class="guide-step"><b>②  다글로 앱 설치 · 권한 허용</b><br>Play스토어에서 <b>다글로</b> 설치 → 카카오/구글 간편가입(무료 사용량 제공) → 최초 실행 시 <b>저장공간·통화녹음 접근 권한 허용</b>.<br>→ 다글로가 새 통화녹음을 <b>자동으로 불러와 텍스트+요약</b>으로 변환합니다.</div>
+      <div class="guide-step"><b>③  ERP에 붙여넣기</b><br>오른쪽 위 <b>[녹취 상담 등록]</b> → 고객·통화일시 선택 → 다글로에서 변환한 <b>전체 텍스트를 '스크립트'</b>에, <b>요약을 '통화 요약'</b>에 붙여넣기. <b>[스크립트 → 요약 초안]</b> 버튼으로 핵심 문장 자동 추출도 가능합니다.</div>
       <div class="guide-step"><b>④  자동 연동</b><br>저장하면 <b>상담관리·고객 상세 상담이력</b>에도 함께 반영됩니다.</div>
-      <div class="guide-warn">⚠️ 통화 녹음·요약은 <b>고객 동의 범위</b> 내에서만 활용하고, 보관기간(여행 종료 후 1년) 경과분은 정리하세요.<br>💡 첨부 파일은 용량 문제로 브라우저에 저장되지 않고 <b>파일명·통화시간만</b> 기록됩니다. 원본 녹취는 폰·드라이브에 별도 보관하세요. 2차 백엔드에 음성인식(STT)·요약 API를 연동하면 <b>파일 업로드만으로 자동화</b>됩니다. (BACKEND-DESIGN.md)</div>
+      <div class="guide-step" style="color:var(--muted);"><b>· 자동 인식이 안 보이면(기종·버전차)</b><br>통화 종료 후 녹음파일 <b>공유 → 다글로</b>(한 번 탭) 또는 녹음폴더를 구글드라이브에 자동백업 → PC 다글로 웹에서 변환하세요.</div>
+      <div class="guide-warn">⚠️ 통화 녹음·요약은 <b>고객 동의 범위</b> 내에서만 활용하고, 보관기간(여행 종료 후 1년) 경과분은 정리하세요. 다글로 무료는 <b>월 사용량 한도</b>가 있어 통화량이 많으면 요금제를 확인하세요.<br>💡 이 화면 첨부 파일은 용량 문제로 브라우저에 저장되지 않고 <b>파일명·통화시간만</b> 기록됩니다(원본은 폰·드라이브 보관). 2차 백엔드에 음성인식(STT)·요약 API를 연동하면 <b>파일 업로드만으로 완전 자동화</b>됩니다. (BACKEND-DESIGN.md)</div>
     </div>`:''}
   </div>`;
 }
@@ -1349,7 +1349,7 @@ function openRecordModal(id,presetCust){
         <div id="rc-fileinfo" class="muted" style="font-size:12px;margin-top:6px;">${rec.filename?`현재: ${escHtml(rec.filename)} · ${fmtDur(rec.duration)}`:'음성 파일 선택 시 파일명·길이가 기록됩니다 (파일 자체는 브라우저에 저장 안 됨).'}</div>
         <input type="hidden" id="rc-fname" value="${escHtml(rec.filename||'')}"><input type="hidden" id="rc-fsize" value="${rec.size||''}">
       </div>
-      <div class="field"><label>전체 스크립트 <span class="faint">(클로바노트 등 변환 텍스트)</span></label>
+      <div class="field"><label>전체 스크립트 <span class="faint">(다글로 등 변환 텍스트 붙여넣기)</span></label>
         <textarea id="rc-transcript" rows="5" placeholder="음성→텍스트 변환 결과를 붙여넣으세요">${escHtml(s?s.transcript||'':'')}</textarea>
         <button type="button" class="btn btn-sm" style="margin-top:8px;" onclick="extractSummary()">${ic('spark','ic')} 스크립트 → 요약 초안</button>
         <span class="faint" style="font-size:11.5px;margin-left:8px;">핵심 문장 자동 추출(간이) · 자동 AI요약은 2차</span></div>
