@@ -387,6 +387,56 @@ const RES_FLOW=['inquiry','info_completed','consulting','quote_sent','review','d
 const QUOTE_STATUS={ draft:'작성중', sent:'발송', viewed:'열람', revised:'수정', accepted:'수락', converted:'예약전환', discarded:'폐기' };
 const QUOTE_STATUS_BADGE={ draft:'b-gray', sent:'b-blue', viewed:'b-blue', revised:'b-orange', accepted:'b-green', converted:'b-teal', discarded:'b-red' };
 const ITEM_TYPES={ ferry:'배편', lodging:'숙박', tour:'투어', vehicle:'차량', meal:'식사', ticket:'입장료', insurance:'보험', etc:'기타', discount:'할인' };
+
+/* ============================================================
+   울릉도 자동견적 요금 엔진 (docs/02-quote-builder-spec 기준)
+   ============================================================ */
+const ULG={
+  ships:{ crz:{name:'포항크루즈', ticket:190000}, poh:{name:'포항쾌속', ticket:175000}, muk:{name:'묵호', ticket:160000} },
+  tours:{
+    bus:{name:'버스투어', price:38000, perPerson:true},
+    taxi:{name:'택시투어', price:300000, perPerson:false},
+    starex:{name:'스타렉스투어', price:350000, perPerson:false},
+    combi:{name:'단독콤비투어', price:400000, perPerson:false},
+    van25:{name:'단독25인승', price:500000, perPerson:false},
+    van35:{name:'단독35인승', price:600000, perPerson:false},
+    rent:{name:'자유렌트', perPerson:false, rent:true},
+  },
+  rentCars:{
+    ray:{name:'레이', off:50000, peak:80000},
+    avante:{name:'아반떼/K3', off:60000, peak:90000},
+    kona:{name:'코나/셀토스', off:70000, peak:100000},
+    tucson:{name:'투싼/스포티지', off:80000, peak:110000},
+    staria:{name:'스타리아/스타렉스', off:110000, peak:140000},
+    carnival:{name:'카니발', off:110000, peak:140000},
+    solati:{name:'쏠라티', off:290000, peak:340000},
+  },
+  rentMargin:10000,
+  dokdoFee:55000,
+  mealPrice:{ breakfast:8000, cruiseBreakfast:12000, lunch:10000, dinner:12000 },
+  depositPerPerson:100000,
+  grades:{
+    adult:{name:'대인', rate:0}, senior:{name:'경로', rate:0.2}, child:{name:'소인', rate:0.5},
+    group:{name:'단체', rate:0.1}, disabled:{name:'장애', rate:0.5}, disabledCare:{name:'장애보호', rate:0.2}, veteran:{name:'보훈대상자', rate:0.2},
+  },
+  peakFrom:'07-15', peakTo:'08-20',
+};
+const SEASONS={ week:'주중', weekend:'주말', peak:'성수기' };
+function round100(n){ return Math.round(n/100)*100; }
+// 시즌 자동: 성수기(7/15~8/20) > 주말(금·토) > 주중
+function autoSeason(iso){
+  if(!iso) return 'week';
+  const md=iso.slice(5,10);
+  if(md>=ULG.peakFrom&&md<=ULG.peakTo) return 'peak';
+  const wd=new Date(iso).getDay(); // 5금 6토
+  return (wd===5||wd===6)?'weekend':'week';
+}
+// 끼니 자동 규칙(1인 기준): 1박2일=조1중2 / 2박3일 묵호=조2중2 / 2박3일 그외=조2중3
+function autoMeals(nights, ship){
+  if(nights===1) return {breakfast:1, lunch:2};
+  if(ship==='muk') return {breakfast:2, lunch:2};
+  return {breakfast:2, lunch:3};
+}
 const PAY_METHOD={ bank:'계좌이체', card:'카드', cash:'현금', etc:'기타' };
 const PAY_TYPE={ deposit:'예약금', balance:'잔금', extra:'추가금' };
 const SEG_STATUS={ checking:'확인중', reserved:'예약', confirmed:'확정', changed:'변경', cancelled:'취소', disrupted:'결항' };
@@ -1459,9 +1509,9 @@ function renderQuoteBuilder(el,id){
     _builder={ id:null, customer_id:custId, user_id:session().id, status:'draft',
       travel_start_date:addDays(todayISO(),7), travel_end_date:addDays(todayISO(),9),
       adults:2, children:0, infants:0, valid_until:addDays(todayISO(),7), public_note:'', internal_note:'',
-      items:[{id:uid(),item_type:'ferry',item_name:'왕복 배편',quantity:2,sale_price:100000,cost_price:84000},
-             {id:uid(),item_type:'lodging',item_name:'숙박 2박',quantity:1,sale_price:225000,cost_price:180000}] };
+      items:[], ulg:defaultUlg() };
   }
+  if(!_builder.ulg) _builder.ulg=defaultUlg();
   drawBuilder(el);
 }
 function drawBuilder(el){
@@ -1490,6 +1540,7 @@ function drawBuilder(el){
           <div class="field"><label>유아</label><input type="number" min="0" value="${b.infants}" onchange="_builder.infants=+this.value;recalcBuilder()"></div>
         </div>
       </div>
+      ${ulgPanelHtml(b)}
       <div class="card">
         <div class="card-head"><h3>견적 항목</h3>
           <div style="display:flex;gap:6px;"><button class="btn btn-sm" onclick="loadProduct()">${ic('box','ic')} 상품 불러오기</button><button class="btn btn-sm btn-primary" onclick="addItem()">${ic('plus','ic')} 항목추가</button></div>
@@ -1528,6 +1579,133 @@ function drawBuilder(el){
     </div>
   </div>`;
 }
+/* ---- 울릉도 자동견적 패널 ---- */
+let _ulgOpen=true;
+function defaultUlg(){
+  return { ship:'crz', ticket:190000, fuel:0, nights:2, seasonManual:null, cruiseBfast:true,
+    tour:{method:'bus', fee:38000, car:'ray', cars:1, carBase:50000},
+    dokdo:{on:false, fee:55000, count:0},
+    meal:{ dinner:0, priceB:8000, priceCB:12000, priceL:10000, priceD:12000 },
+    lodgings:[], tiers:[{grade:'adult', count:2}] };
+}
+function ulgSeason(){ const u=_builder.ulg; return u.seasonManual||autoSeason(_builder.travel_start_date); }
+function ulgTierSum(){ return _builder.ulg.tiers.reduce((s,t)=>s+(+t.count||0),0); }
+function ulgCompute(){
+  const u=_builder.ulg; const season=ulgSeason(); const tierSum=ulgTierSum(); const lines=[];
+  // 승선권 (등급별, 할인은 승선권에만)
+  u.tiers.forEach(t=>{ const cnt=+t.count||0; if(cnt<=0) return; const g=ULG.grades[t.grade];
+    const per=round100(u.ticket*(1-g.rate))+(+u.fuel||0);
+    lines.push({type:'ferry', name:`왕복승선권 ${g.name}`, qty:cnt, unit:per, total:per*cnt}); });
+  // 투어
+  const tour=ULG.tours[u.tour.method];
+  if(u.tour.method==='rent'){ const base=(+u.tour.carBase||0)+ULG.rentMargin; const tot=base*u.nights*(+u.tour.cars||1);
+    lines.push({type:'vehicle', name:`자유렌트 ${ULG.rentCars[u.tour.car].name} ${u.nights}박×${u.tour.cars||1}대`, qty:1, unit:tot, total:tot});
+  } else if(tour.perPerson){ const q=Math.max(tierSum,1); lines.push({type:'tour', name:tour.name, qty:q, unit:(+u.tour.fee||0), total:(+u.tour.fee||0)*q});
+  } else { lines.push({type:'tour', name:tour.name, qty:1, unit:(+u.tour.fee||0), total:(+u.tour.fee||0)}); }
+  // 독도
+  if(u.dokdo.on){ const q=(+u.dokdo.count>0?+u.dokdo.count:tierSum); lines.push({type:'tour', name:'독도 탐방', qty:q, unit:(+u.dokdo.fee||0), total:(+u.dokdo.fee||0)*q}); }
+  // 식대 (끼니 자동 + 크루즈 조식 1끼 치환)
+  const m=autoMeals(u.nights,u.ship); const bCnt=m.breakfast, lCnt=m.lunch, dCnt=+u.meal.dinner||0;
+  let bTotal=(u.ship==='crz'&&u.cruiseBfast&&bCnt>0)?((+u.meal.priceCB||0)+(+u.meal.priceB||0)*(bCnt-1)):((+u.meal.priceB||0)*bCnt);
+  const perMeal=bTotal+(+u.meal.priceL||0)*lCnt+(+u.meal.priceD||0)*dCnt;
+  if(perMeal>0&&tierSum>0) lines.push({type:'meal', name:`식대(조${bCnt}·중${lCnt}${dCnt?'·석'+dCnt:''})`, qty:tierSum, unit:perMeal, total:perMeal*tierSum});
+  // 숙소
+  u.lodgings.forEach(l=>{ if(l.name&&(+l.price>0)){ const rooms=+l.rooms||1; lines.push({type:'lodging', name:l.name, qty:rooms, unit:+l.price, total:(+l.price)*rooms}); } });
+  const total=lines.reduce((s,l)=>s+l.total,0); const deposit=tierSum*ULG.depositPerPerson;
+  return {season, tierSum, lines, total, deposit};
+}
+function ulgPanelHtml(b){
+  const u=b.ulg; const c=ulgCompute(); const season=c.season; const auto=autoSeason(b.travel_start_date);
+  const shipOpts=Object.entries(ULG.ships).map(([k,v])=>`<option value="${k}" ${u.ship===k?'selected':''}>${v.name}</option>`).join('');
+  const tourOpts=Object.entries(ULG.tours).map(([k,v])=>`<option value="${k}" ${u.tour.method===k?'selected':''}>${v.name}</option>`).join('');
+  const carOpts=Object.entries(ULG.rentCars).map(([k,v])=>`<option value="${k}" ${u.tour.car===k?'selected':''}>${v.name}</option>`).join('');
+  const gradeOpts=g=>Object.entries(ULG.grades).map(([k,v])=>`<option value="${k}" ${g===k?'selected':''}>${v.name} (${Math.round(v.rate*100)}%)</option>`).join('');
+  const m=autoMeals(u.nights,u.ship);
+  return `<div class="card" style="margin-bottom:16px;">
+    <div class="card-head" style="cursor:pointer;" onclick="_ulgOpen=!_ulgOpen;recalcBuilder()">
+      <h3 style="font-size:15px;">🧮 울릉도 요금 자동계산 <span class="faint" style="font-weight:400;font-size:12px;">선박·시즌·투어·식대·등급 반영</span></h3>
+      <span class="muted" style="font-size:12.5px;">${_ulgOpen?'접기 ▲':'펼치기 ▼'}</span>
+    </div>
+    ${_ulgOpen?`<div class="card-pad">
+      <div class="form-row">
+        <div class="field"><label>가는편 선박</label><select onchange="ulgShip(this.value)">${shipOpts}</select></div>
+        <div class="field"><label>왕복승선권 (대인 1인)</label><input type="number" value="${u.ticket}" onchange="_builder.ulg.ticket=+this.value;recalcBuilder()"></div>
+      </div>
+      <div class="form-row">
+        <div class="field"><label>일정</label><select onchange="ulgNights(+this.value)"><option value="1" ${u.nights===1?'selected':''}>1박 2일</option><option value="2" ${u.nights===2?'selected':''}>2박 3일</option></select></div>
+        <div class="field"><label>유류할증료 (1인, 할인없음)</label><input type="number" value="${u.fuel}" onchange="_builder.ulg.fuel=+this.value;recalcBuilder()"></div>
+      </div>
+      <div class="field"><label>요금 시즌 <span class="faint">(출발일 자동: ${SEASONS[auto]})</span></label>
+        <div class="pill-toggle">${Object.entries(SEASONS).map(([k,v])=>`<button type="button" class="${u.seasonManual===k?'active':''}" onclick="ulgSeason2('${k}')">${v}</button>`).join('')}<button type="button" class="${u.seasonManual==null?'active':''}" onclick="ulgSeason2(null)">자동</button></div></div>
+      ${u.ship==='crz'?`<div class="faint" style="font-size:11.5px;margin-top:-4px;">※ 포항크루즈: 전날 밤 승선 → 도착일 +1일, 표기 박수 +1 (요금은 원래 박수 기준)</div>`:''}
+      <div class="divider"></div>
+      <div class="form-row">
+        <div class="field"><label>투어 방법</label><select onchange="ulgTour(this.value)">${tourOpts}</select></div>
+        ${u.tour.method==='rent'?`<div class="field"><label>차종</label><select onchange="ulgCar(this.value)">${carOpts}</select></div>`:`<div class="field"><label>투어 요금 ${ULG.tours[u.tour.method].perPerson?'(1인당)':'(팀 총액)'}</label><input type="number" value="${u.tour.fee}" onchange="_builder.ulg.tour.fee=+this.value;recalcBuilder()"></div>`}
+      </div>
+      ${u.tour.method==='rent'?`<div class="form-row">
+        <div class="field"><label>차량 기준가 (1박·${SEASONS[season]})</label><input type="number" value="${u.tour.carBase}" onchange="_builder.ulg.tour.carBase=+this.value;recalcBuilder()"></div>
+        <div class="field"><label>차량 대수</label><input type="number" min="1" value="${u.tour.cars}" onchange="_builder.ulg.tour.cars=+this.value;recalcBuilder()"></div>
+      </div><div class="faint" style="font-size:11.5px;margin:-6px 0 8px;">자유렌트 = (기준가 ${money(u.tour.carBase)} + 마진 ${money(ULG.rentMargin)}) × ${u.nights}박 × ${u.tour.cars||1}대 = ${money(((+u.tour.carBase||0)+ULG.rentMargin)*u.nights*(u.tour.cars||1))}원</div>`:''}
+      <div class="field mb0"><label style="display:flex;align-items:center;gap:8px;cursor:pointer;"><input type="checkbox" ${u.dokdo.on?'checked':''} onchange="_builder.ulg.dokdo.on=this.checked;recalcBuilder()" style="width:auto;"> 독도 탐방 포함</label></div>
+      ${u.dokdo.on?`<div class="form-row" style="margin-top:10px;">
+        <div class="field"><label>독도 1인 추가요금</label><input type="number" value="${u.dokdo.fee}" onchange="_builder.ulg.dokdo.fee=+this.value;recalcBuilder()"></div>
+        <div class="field"><label>탐방 인원 <span class="faint">(0=전원 ${c.tierSum})</span></label><input type="number" min="0" value="${u.dokdo.count}" onchange="_builder.ulg.dokdo.count=+this.value;recalcBuilder()"></div>
+      </div>`:''}
+      <div class="divider"></div>
+      <div style="font-size:13px;font-weight:700;margin-bottom:8px;">식대 (1인 기준) <span class="faint" style="font-weight:400;">끼니 자동: 조${m.breakfast}·중${m.lunch}${(+u.meal.dinner)?'·석'+u.meal.dinner:''}</span></div>
+      <div class="form-row-3">
+        <div class="field"><label>조식 단가</label><input type="number" value="${u.meal.priceB}" onchange="_builder.ulg.meal.priceB=+this.value;recalcBuilder()"></div>
+        <div class="field"><label>중식 단가</label><input type="number" value="${u.meal.priceL}" onchange="_builder.ulg.meal.priceL=+this.value;recalcBuilder()"></div>
+        <div class="field"><label>석식 단가</label><input type="number" value="${u.meal.priceD}" onchange="_builder.ulg.meal.priceD=+this.value;recalcBuilder()"></div>
+      </div>
+      <div class="form-row">
+        <div class="field"><label>석식 수량 (자유식)</label><input type="number" min="0" value="${u.meal.dinner}" onchange="_builder.ulg.meal.dinner=+this.value;recalcBuilder()"></div>
+        ${u.ship==='crz'?`<div class="field"><label>크루즈 조식</label><label style="display:flex;align-items:center;gap:8px;font-weight:400;font-size:13px;height:38px;"><input type="checkbox" ${u.cruiseBfast?'checked':''} onchange="_builder.ulg.cruiseBfast=this.checked;recalcBuilder()" style="width:auto;"> 조식 1끼 크루즈조식(${money(u.meal.priceCB)})</label></div>`:`<div class="field"></div>`}
+      </div>
+      <div class="divider"></div>
+      <div class="between" style="margin-bottom:8px;"><div style="font-size:13px;font-weight:700;">인원 구성 <span class="faint" style="font-weight:400;">(할인은 승선권에만)</span></div><button class="btn btn-sm" onclick="ulgAddTier()">+ 등급</button></div>
+      ${u.tiers.map((t,i)=>{ const g=ULG.grades[t.grade]; const per=round100(u.ticket*(1-g.rate))+(+u.fuel||0); return `<div class="form-row" style="align-items:end;margin-bottom:8px;">
+        <div class="field mb0"><select onchange="_builder.ulg.tiers[${i}].grade=this.value;recalcBuilder()">${gradeOpts(t.grade)}</select></div>
+        <div class="field mb0" style="max-width:100px;"><input type="number" min="0" value="${t.count}" onchange="_builder.ulg.tiers[${i}].count=+this.value;recalcBuilder()"></div>
+        <div style="font-size:12.5px;color:var(--muted);white-space:nowrap;padding-bottom:10px;">1인 ${money(per)}원${u.tiers.length>1?` <button class="del" onclick="ulgDelTier(${i})" style="vertical-align:-3px;">×</button>`:''}</div>
+      </div>`;}).join('')}
+      <div class="divider"></div>
+      <div class="between" style="margin-bottom:8px;"><div style="font-size:13px;font-weight:700;">숙소</div><button class="btn btn-sm" onclick="ulgAddLodging()">+ 숙소</button></div>
+      ${u.lodgings.map((l,i)=>`<div class="form-row" style="align-items:end;margin-bottom:8px;">
+        <div class="field mb0"><input placeholder="숙소·객실명" value="${(l.name||'').replace(/"/g,'&quot;')}" onchange="_builder.ulg.lodgings[${i}].name=this.value;recalcBuilder()"></div>
+        <div class="field mb0" style="max-width:120px;"><input type="number" placeholder="객실단가" value="${l.price||''}" onchange="_builder.ulg.lodgings[${i}].price=+this.value;recalcBuilder()"></div>
+        <div class="field mb0" style="max-width:76px;"><input type="number" min="1" value="${l.rooms||1}" onchange="_builder.ulg.lodgings[${i}].rooms=+this.value;recalcBuilder()"></div>
+        <div style="padding-bottom:10px;"><button class="del" onclick="ulgDelLodging(${i})">×</button></div>
+      </div>`).join('')||'<div class="faint" style="font-size:12px;margin-bottom:8px;">필요 시 숙소를 추가하세요. (객실단가 × 객실수)</div>'}
+      <div class="divider"></div>
+      <div class="between" style="align-items:center;gap:12px;flex-wrap:wrap;">
+        <div style="font-size:13px;"><span class="muted">예상 총액</span> <b style="font-size:16px;color:var(--blue);">${money(c.total)}원</b> <span class="faint">· 계약금 ${money(c.deposit)}원 (${c.tierSum}인×10만)</span></div>
+        <button class="btn btn-primary" onclick="applyUlg()">${ic('spark','ic')} 요금 자동 반영</button>
+      </div>
+    </div>`:''}
+  </div>`;
+}
+function ulgShip(v){ const u=_builder.ulg; u.ship=v; u.ticket=ULG.ships[v].ticket; recalcBuilder(); }
+function ulgNights(n){ _builder.ulg.nights=n; ulgSyncEnd(); recalcBuilder(); }
+function ulgSeason2(v){ _builder.ulg.seasonManual=v; if(_builder.ulg.tour.method==='rent') ulgSyncCarBase(); recalcBuilder(); }
+function ulgTour(v){ const u=_builder.ulg; u.tour.method=v; if(v!=='rent'&&ULG.tours[v].price!=null) u.tour.fee=ULG.tours[v].price; if(v==='rent') ulgSyncCarBase(); recalcBuilder(); }
+function ulgCar(v){ _builder.ulg.tour.car=v; ulgSyncCarBase(); recalcBuilder(); }
+function ulgSyncCarBase(){ const u=_builder.ulg; u.tour.carBase=ULG.rentCars[u.tour.car][ulgSeason()==='peak'?'peak':'off']; }
+function ulgSyncEnd(){ const b=_builder; if(b.travel_start_date) b.travel_end_date=addDays(b.travel_start_date, b.ulg.nights+(b.ulg.ship==='crz'?1:0)); }
+function ulgAddTier(){ _builder.ulg.tiers.push({grade:'adult',count:1}); recalcBuilder(); }
+function ulgDelTier(i){ _builder.ulg.tiers.splice(i,1); recalcBuilder(); }
+function ulgAddLodging(){ _builder.ulg.lodgings.push({name:'',price:0,rooms:1}); recalcBuilder(); }
+function ulgDelLodging(i){ _builder.ulg.lodgings.splice(i,1); recalcBuilder(); }
+function applyUlg(){
+  const c=ulgCompute(); const u=_builder.ulg;
+  if(!c.tierSum){ toast('인원 구성을 1명 이상 입력하세요','err'); return; }
+  _builder.items=c.lines.map(l=>({id:uid(), item_type:l.type, item_name:l.name, quantity:l.qty, sale_price:l.unit, cost_price:l.unit}));
+  let ad=0, ch=0; u.tiers.forEach(t=>{ if(t.grade==='child') ch+=(+t.count||0); else ad+=(+t.count||0); });
+  _builder.adults=ad; _builder.children=ch; _builder.infants=0; ulgSyncEnd();
+  recalcBuilder();
+  toast('요금이 견적 항목에 반영됐습니다. 원가를 입력하면 이익·마진이 계산됩니다','ok');
+}
 function itemRowHtml(it,idx){
   return `<div class="item-row" data-idx="${idx}">
     <select onchange="_builder.items[${idx}].item_type=this.value">${Object.entries(ITEM_TYPES).map(([k,v])=>`<option value="${k}" ${it.item_type===k?'selected':''}>${v}</option>`).join('')}</select>
@@ -1558,7 +1736,8 @@ function saveQuote(preview,sendSms){
   const b=_builder;
   if(!b.items.length){ toast('견적 항목을 1개 이상 추가하세요','err'); return; }
   let sale=0,cost=0; b.items.forEach(i=>{ sale+=(i.sale_price||0)*(i.quantity||1); cost+=(i.cost_price||0)*(i.quantity||1); });
-  const profit=sale-cost, margin=sale?(profit/sale*100):0; const dep=Math.round(sale*0.2/10000)*10000;
+  const profit=sale-cost, margin=sale?(profit/sale*100):0;
+  const cnt=(b.adults||0)+(b.children||0)+(b.infants||0); const dep=cnt?cnt*ULG.depositPerPerson:Math.round(sale*0.2/10000)*10000;
   let q;
   if(b.id){ q=byId(DB.quotes,b.id); Object.assign(q,{customer_id:b.customer_id,travel_start_date:b.travel_start_date,travel_end_date:b.travel_end_date,adults:b.adults,children:b.children,infants:b.infants,total_price:sale,total_cost:cost,profit,margin_rate:+margin.toFixed(1),deposit_amount:dep,balance_amount:sale-dep,valid_until:b.valid_until,public_note:b.public_note,internal_note:b.internal_note,updated_at:nowISO()});
     DB.quote_items=DB.quote_items.filter(i=>i.quote_id!==b.id);
