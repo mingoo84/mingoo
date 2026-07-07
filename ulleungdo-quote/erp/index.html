@@ -89,7 +89,7 @@ svg.ic{width:16px;height:16px;flex-shrink:0;fill:none;stroke:currentColor;stroke
   font-weight:600;font-size:13.5px;margin-bottom:1px;position:relative;
   transition:background .16s ease,color .16s ease,transform .16s ease;
 }
-.sb-item span:not(.badge-n){display:inline-block;transform-origin:left center;transition:transform .16s ease;}
+.sb-item span:not(.badge-n):not(.sb-tail){display:inline-block;transform-origin:left center;transition:transform .16s ease;}
 .sb-item .ic{transition:transform .16s ease;}
 .sb-item:last-child{margin-bottom:0;}
 .sb-item:hover{background:var(--bg);color:var(--ink);transform:translateX(3px);}
@@ -101,6 +101,8 @@ svg.ic{width:16px;height:16px;flex-shrink:0;fill:none;stroke:currentColor;stroke
 .sb-toggle{width:100%;border:none;background:transparent;cursor:pointer;font-family:inherit;text-align:left;}
 .sb-toggle.pactive{color:var(--blue-dark);}
 .sb-tail{margin-left:auto;display:flex;align-items:center;gap:6px;}
+.sb-tail .chev{flex:none;}
+.sb-tail .badge-n{margin-left:0;flex:none;}
 .sb-toggle .chev{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round;transition:transform .2s ease;opacity:.7;}
 .sb-parent.open .sb-toggle .chev{transform:rotate(90deg);}
 .sb-toggle:hover span:not(.sb-tail){transform:none;} /* 부모는 텍스트 확대 생략(칩·화살표 정렬 유지) */
@@ -715,7 +717,7 @@ function renderShell(app){
       const childActive=n.children.some(c=>c.id===act);
       const open=_navOpen.has(n.id)||childActive;
       return `<div class="sb-parent ${open?'open':''}" data-id="${n.id}">
-        <button type="button" class="sb-item sb-toggle ${childActive?'pactive':''}" onclick="toggleNav('${n.id}')">${ic(n.icon)}<span>${n.label}</span><span class="sb-tail">${navBadge('consultations')}<svg class="chev" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></span></button>
+        <button type="button" class="sb-item sb-toggle ${childActive?'pactive':''}" onclick="toggleNav('${n.id}')">${ic(n.icon)}<span>${n.label}</span><span class="sb-tail"><svg class="chev" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg>${navBadge('consultations')}</span></button>
         <div class="sb-sub">${n.children.map(c=>`<a class="sb-item sb-child ${act===c.id?'active':''}" href="${c.route}" onclick="closeSidebar()"><span class="cdot"></span><span>${c.label}</span></a>`).join('')}</div>
       </div>`;
     }
