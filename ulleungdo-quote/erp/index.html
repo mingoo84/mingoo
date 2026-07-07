@@ -768,6 +768,7 @@ const NAV=[
   {id:'consult',label:'상담',icon:'chat',children:[
     {id:'consultations',label:'상담관리',route:'#/consultations'},
     {id:'call_records',label:'상담내역',route:'#/call-records'},
+    {id:'link_consult',label:'링크상담',route:'#/link-consult'},
   ]},
   {id:'quote_new',label:'자동견적',icon:'plus',route:'#/quotes/new'},
   {id:'quotes',label:'견적내역',icon:'doc',route:'#/quotes'},
@@ -793,6 +794,7 @@ function activeNavId(){
   const r=seg[0];
   if(r==='quotes'){ const sub=(seg[1]||'').split('?')[0]; return sub==='new'?'quote_new':'quotes'; }
   if(r==='call-records') return 'call_records';
+  if(r==='link-consult') return 'link_consult';
   if(r==='sms') return 'reservations'; /* 문자 화면은 예약/문자 메뉴에 귀속 */
   return r;
 }
@@ -825,6 +827,7 @@ function render(){
     else if(route==='customers'){ seg[1]?renderCustomerDetail(content,seg[1]):renderCustomers(content); }
     else if(route==='consultations') renderConsultations(content);
     else if(route==='call-records') renderCallRecords(content);
+    else if(route==='link-consult') renderLinkConsult(content);
     else if(route==='quotes'){ const sub=(seg[1]||'').split('?')[0]; sub==='new'?renderQuoteBuilder(content,null):(sub?renderQuoteBuilder(content,sub):renderQuotes(content)); }
     else if(route==='reservations'){ seg[1]?renderReservationDetail(content,seg[1]):renderReservations(content); }
     else if(route==='payments') renderPayments(content);
@@ -1322,9 +1325,9 @@ function openFormLinkModal(custId){
     </div>
     <div class="modal-foot"><button class="btn" onclick="closeModal()">닫기</button><button class="btn btn-primary" onclick="createFormLink('${custId}')">${ic('message','ic')} 링크 생성 & 문자</button></div>`);
 }
-function createFormLink(custId){
+// 입력폼 링크 발급 공통 로직 (고객 상세의 '입력링크'와 상담탭의 '링크상담'이 공유)
+function issueFormLink(custId, days, resultElId){
   const c=custById(custId);
-  const days=parseInt(document.getElementById('fl-days').value);
   const token=uid().slice(0,8);
   const form={id:uid(),customer_id:custId,token,status:'sent',expires_at:addDays(todayISO(),days)+'T23:59',submitted_at:null,adults:0,created_at:nowISO()};
   DB.customer_forms.push(form);
@@ -1334,13 +1337,136 @@ function createFormLink(custId){
   const msg=fillTemplate(tpl?tpl.content:'예약정보 입력을 부탁드립니다. {예약정보링크}',c,null,{예약정보링크:url});
   DB.sms_logs.unshift({id:uid(),customer_id:custId,reservation_id:null,template_id:tpl?tpl.id:null,phone:c.phone,message:msg,status:'sent',provider_message_id:'MSG-'+uid().slice(0,6),sent_by:session().id,sent_at:nowISO()});
   saveDB();
-  document.getElementById('fl-result').innerHTML=`<div class="divider"></div>
+  const resEl=document.getElementById(resultElId);
+  if(resEl) resEl.innerHTML=`<div class="divider"></div>
     <div style="background:var(--success-bg);border:1px solid #bfe6cb;border-radius:9px;padding:12px;">
       <div style="font-weight:700;color:#15803D;margin-bottom:6px;">✓ 링크 생성 및 문자 발송 완료</div>
       <div style="font-size:12.5px;word-break:break-all;">${url}</div>
       <div style="margin-top:8px;display:flex;gap:6px;"><a class="btn btn-sm" href="#/form/${token}" target="_blank" onclick="closeModal()">입력폼 미리보기 ↗</a><a class="btn btn-sm" href="sms:${c.phone}?body=${encodeURIComponent(msg)}">실제 문자앱 열기</a></div>
     </div>`;
   toast('입력 링크를 발송했습니다','ok');
+  return form;
+}
+function createFormLink(custId){
+  const days=parseInt(document.getElementById('fl-days').value);
+  issueFormLink(custId, days, 'fl-result');
+}
+
+/* ============================================================
+   링크상담 — 통화 전에 고객에게 기본정보 입력 링크를 보내는 상담 방식
+   ============================================================ */
+function renderLinkConsult(el){
+  const list=DB.customer_forms.slice().sort((a,b)=>(b.created_at||'').localeCompare(a.created_at||''));
+  el.innerHTML=`
+  <div class="page-head">
+    <div><h1>링크상담</h1><div class="sub">통화 전 고객에게 링크를 보내 기본정보를 미리 받습니다 · 총 ${list.length}건</div></div>
+    <div class="actions"><button class="btn btn-primary" onclick="openLinkConsultModal()">${ic('plus','ic')} 링크상담 발송</button></div>
+  </div>
+  <div class="card card-pad" style="margin-bottom:16px;font-size:13px;line-height:1.7;color:var(--slate);">
+    ${ic('spark','ic')} 전화 상담 전에 고객에게 모바일 링크를 보내 <b>대표자명·연락처·희망일정·인원</b> 등 기본정보를 먼저 받아두는 방식입니다. 처음 문의한 고객도 <b>신규 문의</b>로 바로 발송할 수 있습니다.
+    고객이 제출하면 상담(<b>견적필요</b>)이 자동 등록되고 대시보드에 알림이 뜹니다.
+  </div>
+  <div class="card"><div class="tbl-wrap"><table class="tbl">
+    <thead><tr><th>고객명</th><th>연락처</th><th>상태</th><th>발송일</th><th>만료일</th><th>제출일</th><th>담당자</th></tr></thead>
+    <tbody>${list.map(f=>{
+      const c=custById(f.customer_id);
+      const name=f.representative_name||(c?c.name:'-');
+      const phone=f.representative_phone||(c?c.phone:'-');
+      const expired=f.status==='sent'&&f.expires_at&&f.expires_at<nowISO();
+      const st=expired?'expired':f.status;
+      return `<tr class="clickable" onclick="openLinkConsultDetail('${f.id}')">
+        <td class="name-cell">${name}</td>
+        <td class="muted">${phone}</td>
+        <td>${formStatusBadge(st)}</td>
+        <td>${fmtDateTime(f.created_at)}</td>
+        <td>${fmtDate(f.expires_at)}</td>
+        <td>${f.submitted_at?fmtDateTime(f.submitted_at):'<span class="faint">-</span>'}</td>
+        <td>${c?userName(c.assigned_user_id):'<span class="faint">-</span>'}</td>
+      </tr>`;
+    }).join('')||`<tr><td colspan="7" class="empty">${ic('message')}<div>발송된 링크상담이 없습니다.</div><div style="font-size:12.5px;color:var(--faint);margin-top:4px;">위 [링크상담 발송]으로 첫 링크를 보내 보세요.</div></td></tr>`}</tbody>
+  </table></div></div>`;
+}
+function openLinkConsultModal(){
+  const custOpts=DB.customers.slice().sort((a,b)=>a.name.localeCompare(b.name,'ko')).map(c=>`<option value="${c.id}">${c.name} (${c.phone})</option>`).join('');
+  const userOpts=DB.users.filter(u=>u.is_active).map(u=>`<option value="${u.id}" ${u.id===session().id?'selected':''}>${u.name}</option>`).join('');
+  openModal(`
+    <div class="modal-head"><h3>링크상담 발송</h3><button class="x" onclick="closeModal()">×</button></div>
+    <div class="modal-body">
+      <div class="field"><label>대상</label>
+        <div class="pill-toggle" id="lc-mode"><button type="button" class="active" data-v="existing" onclick="lcModePick(this)">기존 고객</button><button type="button" data-v="new" onclick="lcModePick(this)">신규 문의</button></div>
+      </div>
+      <div id="lc-existing">
+        <div class="field"><label>고객 선택</label><select id="lc-cust">${custOpts||'<option value="">등록된 고객이 없습니다</option>'}</select></div>
+      </div>
+      <div id="lc-new" style="display:none;">
+        <div class="form-row">
+          <div class="field"><label>고객명 <span class="req">*</span></label><input id="lc-name" placeholder="문의 고객명"></div>
+          <div class="field"><label>연락처 <span class="req">*</span></label><input id="lc-phone" placeholder="010-0000-0000" oninput="phoneFmt(this)"></div>
+        </div>
+        <div class="field"><label>담당자</label><select id="lc-user">${userOpts}</select></div>
+        <div class="field"><label>메모 <span class="faint">(고객 메모로 저장)</span></label><input id="lc-memo" placeholder="예: 홈페이지 문의, 지인 소개 등"></div>
+      </div>
+      <div class="field mb0"><label>링크 유효기간</label><select id="lc-days"><option value="3">3일</option><option value="7" selected>7일</option><option value="14">14일</option><option value="30">30일</option></select></div>
+      <div id="lc-result"></div>
+    </div>
+    <div class="modal-foot"><button class="btn" onclick="closeModal()">닫기</button><button class="btn btn-primary" onclick="sendLinkConsult()">${ic('message','ic')} 링크 생성 & 문자</button></div>`);
+}
+function lcModePick(btn){
+  const g=btn.parentElement; g.querySelectorAll('button').forEach(b=>b.classList.remove('active')); btn.classList.add('active');
+  const mode=btn.dataset.v;
+  document.getElementById('lc-existing').style.display=mode==='existing'?'':'none';
+  document.getElementById('lc-new').style.display=mode==='new'?'':'none';
+}
+function sendLinkConsult(){
+  const mode=document.querySelector('#lc-mode button.active').dataset.v;
+  const days=parseInt(document.getElementById('lc-days').value);
+  if(mode==='new'){
+    const name=document.getElementById('lc-name').value.trim();
+    const phone=document.getElementById('lc-phone').value.trim();
+    if(!name){ toast('고객명을 입력하세요','err'); return; }
+    if(!phone||phone.replace(/[^0-9]/g,'').length<10){ toast('올바른 휴대폰 번호를 입력하세요','err'); return; }
+    const dup=DB.customers.find(c=>c.phone.replace(/-/g,'')===phone.replace(/-/g,''));
+    if(dup){
+      confirmDialog('연락처 중복 알림',`동일 연락처의 고객 <b>${dup.name}</b>님이 이미 등록되어 있습니다.<br>그 고객에게 링크상담을 보낼까요?`,()=>{ issueFormLink(dup.id, days, 'lc-result'); },'그 고객에게 발송','btn-primary');
+      return;
+    }
+    const user=document.getElementById('lc-user').value;
+    const memo=document.getElementById('lc-memo').value.trim();
+    const nc={id:uid(), name, phone, birth_date:null, region:'', customer_type:'individual', memo, privacy_agreed_at:null, assigned_user_id:user, created_at:nowISO(), updated_at:nowISO()};
+    DB.customers.unshift(nc); saveDB();
+    issueFormLink(nc.id, days, 'lc-result');
+  } else {
+    const custId=document.getElementById('lc-cust').value;
+    if(!custId){ toast('고객을 선택하세요','err'); return; }
+    issueFormLink(custId, days, 'lc-result');
+  }
+}
+function openLinkConsultDetail(fid){
+  const f=DB.customer_forms.find(x=>x.id===fid); if(!f) return;
+  const c=custById(f.customer_id);
+  const expired=f.status==='sent'&&f.expires_at&&f.expires_at<nowISO();
+  const st=expired?'expired':f.status;
+  openModal(`
+    <div class="modal-head"><h3>링크상담 상세</h3><button class="x" onclick="closeModal()">×</button></div>
+    <div class="modal-body">
+      <div class="kv"><div class="k">고객</div><div class="v">${c?c.name+' · '+c.phone:'(고객정보 없음)'}</div></div>
+      <div class="kv"><div class="k">상태</div><div class="v">${formStatusBadge(st)}</div></div>
+      <div class="kv"><div class="k">발송일</div><div class="v">${fmtDateTime(f.created_at)}</div></div>
+      <div class="kv"><div class="k">만료일</div><div class="v">${fmtDate(f.expires_at)}</div></div>
+      ${f.status==='submitted'?`
+      <div class="divider"></div>
+      <div class="kv"><div class="k">대표자</div><div class="v">${f.representative_name} ${f.representative_phone}</div></div>
+      <div class="kv"><div class="k">희망일정</div><div class="v">${fmtDate(f.travel_start_date)} ~ ${fmtDate(f.travel_end_date)}</div></div>
+      <div class="kv"><div class="k">인원</div><div class="v">성인 ${f.adults} · 소아 ${f.children||0} · 유아 ${f.infants||0}</div></div>
+      <div class="kv"><div class="k">출발항</div><div class="v">${f.departure_port||'-'} / 차량선적 ${f.vehicle_shipping?'예':'아니오'}</div></div>
+      <div class="kv"><div class="k">숙박희망</div><div class="v">${f.lodging_preference||'-'}</div></div>
+      <div class="kv"><div class="k">희망투어</div><div class="v">${f.tour_preferences||'-'}</div></div>
+      <div class="kv"><div class="k">요청사항</div><div class="v" style="font-weight:500;">${f.request_memo||'-'}</div></div>
+      <div class="kv"><div class="k">제출일</div><div class="v">${fmtDateTime(f.submitted_at)}</div></div>
+      `:`<p class="muted" style="font-size:13px;margin:10px 0;">${expired?'유효기간이 지나 더 이상 제출할 수 없습니다.':'고객 제출을 기다리는 중입니다.'}</p>
+      <a class="btn btn-sm" href="#/form/${f.token}" target="_blank">입력폼 열기 ↗</a>`}
+    </div>
+    <div class="modal-foot">${c?`<button class="btn btn-ghost" style="margin-right:auto" onclick="nav('#/customers/${c.id}');closeModal()">고객 상세로</button>`:''}<button class="btn" onclick="closeModal()">닫기</button></div>`);
 }
 
 /* ============================================================
